@@ -38,6 +38,17 @@ body {
 }
 
 h1 { font-size: 28px; margin: 0; }
+/* header logo */
+.brand { display: flex; align-items: center; gap: 0; }
+.app-logo { width: 36px; height: 36px; display: block; }
+.app-logo-fallback { width: 36px; height: 36px; display: none; }
+.brand-name {
+  margin-left: 0;
+  font-family: 'Caveat', cursive;
+  font-size: 28px;
+  letter-spacing: 1px;
+  color: var(--text);
+}
 h2 { font-size: 22px; margin: 0 0 20px; color: var(--muted); font-weight: 600; letter-spacing: .3px; }
 
 .controls { display: flex; gap: 10px; flex-wrap: wrap; }
@@ -86,10 +97,12 @@ input[type="text"] { flex: 1; background: #0b0e17; border: 1px solid rgba(255,25
 
 .round-info { color: var(--muted); font-size: 20px; line-height: 1.8; }
 .cue-area { display: flex; gap: 12px; margin-top: 12px; }
+.cue-area input[type="text"] { height: 36px; padding: 6px 12px; font-size: 16px; }
+.cue-area button { height: 36px; padding: 0 14px; display: inline-flex; align-items: center; font-size: 16px; }
 .current-cue { margin-top: 12px; font-weight: 600; font-size: 18px; }
 .hidden { display: none !important; }
 
-.log { display: grid; gap: 10px; max-height: 350px; overflow: auto; font-size: 18px; }
+.log { display: grid; gap: 10px; height: 300px; max-height: 300px; overflow: auto; font-size: 18px; }
 .log-entry { background: #0f1320; padding: 12px 14px; border-radius: 8px; color: var(--muted); }
 
 /* Themed scrollbar for History panel */
@@ -216,8 +229,8 @@ input[type="text"] { flex: 1; background: #0b0e17; border: 1px solid rgba(255,25
   width: var(--cell-size); 
   height: var(--cell-size); 
   border-radius: calc(var(--cell-size) * 0.25); 
-  border: 1px solid rgba(0,0,0,0.25);
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.05), 0 2px 6px rgba(0,0,0,0.25);
+  border: 1px solid rgba(0,0,0,0.18);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.07), 0 2px 6px rgba(0,0,0,0.18);
   position: relative;
   transform: translateZ(0);
   transition: transform .12s ease, box-shadow .12s ease;

@@ -207,6 +207,8 @@ async fn handle_client_msg(conn_id: Uuid, cmd: ClientMsg, state: &Shared) {
             let mut guard = state.lock();
             if let Some((room_name, _player_id)) = guard.conns.get(&conn_id).cloned() {
                 if let Some(room) = guard.rooms.get_mut(&room_name) {
+                    // reset scores and state for a new game
+                    for pl in room.players.iter_mut() { pl.score = 0; }
                     room.round = 1;
                     room.cue_giver_idx = 0;
                     room.phase = Phase::Cue1;

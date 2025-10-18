@@ -35,12 +35,26 @@
   const lockCueBtn2 = document.getElementById('lockCueBtn2');
   const currentCueEl = document.getElementById('currentCue');
   const logEl = document.getElementById('log');
+  // Модалка победителя
+  const winnerModalEl = document.getElementById('winnerModal');
+  const winnerTitleEl = document.getElementById('winnerTitle');
+  const winnerTextEl = document.getElementById('winnerText');
+  const newGameBtn = document.getElementById('newGameBtn');
+  // Логотип: подстраховка — если не загрузится файл иконки, покажем SVG-иконку
+  const logoImg = document.querySelector('.app-logo');
+  const logoFallback = document.querySelector('.app-logo-fallback');
+  if (logoImg && logoFallback) {
+    const showFallback = () => { logoImg.style.display = 'none'; logoFallback.style.display = 'inline-block'; };
+    logoImg.addEventListener('error', showFallback, { once: true });
+    if (logoImg.complete && logoImg.naturalWidth === 0) showFallback();
+  }
   // Всегда прячем локальную секцию добавления игроков (онлайн-режим только)
   if (addPlayerSectionEl) addPlayerSectionEl.style.display = 'none';
 
   // Configurable board size via CSS variables
   const COLS = 30;
   const ROWS = 18;
+  const WIN_SCORE = 15; // победа при достижении этого количества очков
 
   /** @typedef {{ id:string, name:string, score:number }} Player */
   /** @typedef {{ round:number, cueGiverIndex:number, targetIndex:number|null, cue:string|null, guesses:Record<string, number|null>, phase:'setup'|'cue'|'guess'|'reveal' }} GameState */
@@ -64,6 +78,9 @@
   // Локальная подсветка выбранного индекса до того, как сервер пришлёт target (только для дающего)
   let localSelectedIdx = null;
   let localSelectedRound = null;
+  let winnerShown = false;
+  let modalBlockedUntilStart = true;
+  let suppressWinnerModal = false; // не показывать модалку, пока ждём reset после start_game
   /** @type {GameState} */
   let state = {
     round: 0,
@@ -119,8 +136,11 @@
     for (let r = 0; r < ROWS; r++) {
       for (let c = 0; c < COLS; c++) {
         const hue = Math.round((c / COLS) * 360);
-        const sat = 70; // fixed saturation
-        const light = 60 - Math.round((r / (ROWS - 1)) * 30); // gradient of lightness
+        const sat = 100; // насыщенные цвета
+        const topL = 72; // светлее сверху
+        const bottomL = 22; // темнее снизу
+        const tRow = r / (ROWS - 1);
+        const light = Math.round(topL + (bottomL - topL) * tRow);
         const color = `hsl(${hue}deg ${sat}% ${light}%)`;
 
         const idx = r * COLS + c;
@@ -383,7 +403,7 @@
       if (online) {
         const hasOptions = Array.isArray(s?.select_options) && s.select_options.length > 0;
         const targetNotChosen = !s?.target;
-        if (isGiver && hasOptions && targetNotChosen && s.round !== modalShownRound) {
+        if (!modalBlockedUntilStart && isGiver && hasOptions && targetNotChosen && s.round !== modalShownRound) {
           try {
             showColorSelectionModal();
             modalShownRound = s.round;
@@ -446,6 +466,11 @@
     } else {
       startOfflineGame();
     }
+    // при старте новой игры скрываем модалку победителя и сбрасываем флаг
+    if (winnerModalEl) winnerModalEl.classList.add('hidden');
+    winnerShown = false;
+    modalBlockedUntilStart = false;
+    suppressWinnerModal = false;
   }
 
   function startOfflineGame() {
@@ -652,6 +677,7 @@
       connectBtn.textContent = 'Отключиться';
       connectBtn.onclick = wsDisconnect;
       startGameBtn.disabled = false;
+      modalBlockedUntilStart = true;
     };
     ws.onmessage = (ev) => {
       try {
@@ -669,6 +695,7 @@
       connectBtn.onclick = wsConnect;
       startGameBtn.disabled = true;
       ws = null;
+      modalBlockedUntilStart = true;
     };
   }
   function wsDisconnect() { if (ws) ws.close(); }
@@ -676,6 +703,14 @@
 
   function applyServerState(s) {
     window.__serverState = s;
+    // Не показывать модалку при самом первом подключении (только если это лобби):
+    if (prevServerRound == null && (s.phase === 'lobby' || s.phase === 'setup' || s.round === 0)) {
+      modalShownRound = s.round;
+    }
+    // Разрешаем модалку выбора только после фактического повышения номера раунда
+    if (prevServerRound != null && s.round > prevServerRound) {
+      modalBlockedUntilStart = false;
+    }
     players = s.players || [];
     state.round = s.round;
     state.cueGiverIndex = s.cue_giver ? players.findIndex(p => p.id === s.cue_giver) : 0;
@@ -766,7 +801,7 @@
       }
     }
     // Логи по изменениям состояния
-    if (prevServerRound !== s.round) {
+    if (prevServerRound !== s.round && prevServerRound != null) {
       log(`— Раунд ${s.round} —`);
       modalShownRound = null; // сбрасываем флаг показа модалки на новый раунд
       localSelectedIdx = null;
@@ -794,10 +829,77 @@
     prevServerCue1 = s.cue1;
     prevServerTarget = s.target;
     updateUIState();
+
+    // Выявление победителя (>= WIN_SCORE) и показ модалки один раз
+    try {
+      const winner = Array.isArray(players) ? players.find(p => (p.score || 0) >= WIN_SCORE) : null;
+      if (winner && !winnerShown && !suppressWinnerModal) {
+        if (winnerTitleEl) winnerTitleEl.textContent = 'Победитель';
+        if (winnerTextEl) winnerTextEl.textContent = `${winner.name} набрал ${WIN_SCORE} очков и победил!`;
+        if (winnerModalEl) winnerModalEl.classList.remove('hidden');
+        winnerShown = true;
+      }
+      // Сброс флага, если началась новая игра (все очки обнулены)
+      if (!winner && players.length > 0 && players.every(p => (p.score || 0) === 0) && (s.round === 0 || s.round === 1) && (s.phase === 'lobby' || s.phase === 'cue1' || s.phase === 'setup')) {
+        winnerShown = false;
+        if (winnerModalEl) winnerModalEl.classList.add('hidden');
+        suppressWinnerModal = false; // сервер подтвердил reset
+      }
+      // Дополнительно: если пришла фаза cue1 (новый раунд/новая игра), гарантированно прячем модалку у всех
+      if (s.phase === 'cue1' && winnerShown) {
+        if (winnerModalEl) winnerModalEl.classList.add('hidden');
+        winnerShown = false;
+        suppressWinnerModal = false;
+      }
+    } catch {}
+
+    // Если начался новый раунд (номер раунда вырос) — это сигнал, что кто-то перезапустил игру.
+    // Закрываем окно победителя у всех клиентов и сбрасываем подавление.
+    if (prevServerRound != null && s.round > prevServerRound) {
+      if (winnerModalEl) winnerModalEl.classList.add('hidden');
+      winnerShown = false;
+      suppressWinnerModal = false;
+    }
   }
 
   // Подключение по фиксированному адресу
   if (connectBtn) connectBtn.addEventListener('click', wsConnect);
+
+  // Кнопка "Начать новую игру" в модалке победителя
+  if (newGameBtn) {
+    newGameBtn.addEventListener('click', () => {
+      // Делаем то же, что и кнопка Старт: запускаем новую игру через сервер
+      // Мгновенно чистим локальные маркеры, чтобы прошлые догадки и подсветки исчезли сразу
+      try {
+        cells.forEach((el) => {
+          el.classList.remove('guess', 'target', 'best', 'selected');
+          el.removeAttribute('data-points');
+        });
+        logEl.innerHTML = '';
+        prevServerRound = null;
+        prevServerPhase = null;
+        prevServerCue1 = null;
+        prevServerTarget = null;
+        localSelectedIdx = null;
+        localSelectedRound = null;
+        modalShownRound = null;
+      } catch {}
+
+      modalBlockedUntilStart = false; // разрешаем модалку выбора после явного старта
+      suppressWinnerModal = true; // не показывать победителя, пока ждём подтверждение от сервера
+      if (isOnline()) {
+        wsSend({ type: 'start_game' });
+      } else {
+        // Если не подключены — подключаемся и после открытия сокета шлём start_game
+        wsConnect();
+        const tryStart = () => { if (isOnline()) { wsSend({ type: 'start_game' }); clearInterval(t); } };
+        const t = setInterval(tryStart, 200);
+        setTimeout(() => clearInterval(t), 6000);
+      }
+      if (winnerModalEl) winnerModalEl.classList.add('hidden');
+      winnerShown = false;
+    });
+  }
 
   function onCellClick(idx) {
     console.log('Cell clicked:', idx);

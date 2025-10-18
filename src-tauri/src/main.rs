@@ -1,4 +1,5 @@
 #![cfg(feature = "desktop")]
+#![cfg_attr(all(windows, not(debug_assertions)), windows_subsystem = "windows")]
 use std::{collections::{HashMap, HashSet}, net::SocketAddr, sync::Arc};
 
 use axum::{extract::State, routing::get, Router};
@@ -127,19 +128,23 @@ async fn main() {
         guard.rooms.insert("default".into(), default_room());
     }
 
-    let ws_state = shared.clone();
-    let app = Router::new()
-        .route("/ws", get(move |ws: WebSocketUpgrade, State(state): State<Shared>| async move {
-            ws.on_upgrade(|socket| handle_socket(socket, state))
-        }))
-        .with_state(ws_state);
+    // Запускаем встроенный WS-сервер ТОЛЬКО если выставлена переменная окружения EMBED_WS=1
+    let maybe_server: Option<JoinHandle<()>> = if std::env::var("EMBED_WS").ok().as_deref() == Some("1") {
+        let ws_state = shared.clone();
+        let app = Router::new()
+            .route("/ws", get(move |ws: WebSocketUpgrade, State(state): State<Shared>| async move {
+                ws.on_upgrade(|socket| handle_socket(socket, state))
+            }))
+            .with_state(ws_state);
 
-    let addr: SocketAddr = "0.0.0.0:8765".parse().unwrap();
-    let server: JoinHandle<()> = tokio::spawn(async move {
-        info!("websocket server listening on {}", addr);
-        let listener = TcpListener::bind(&addr).await.unwrap();
-        axum::serve(listener, app.into_make_service()).await.unwrap();
-    });
+        let addr: SocketAddr = "0.0.0.0:8765".parse().unwrap();
+        let server: JoinHandle<()> = tokio::spawn(async move {
+            info!("websocket server listening on {}", addr);
+            let listener = TcpListener::bind(&addr).await.unwrap();
+            axum::serve(listener, app.into_make_service()).await.unwrap();
+        });
+        Some(server)
+    } else { None };
 
     tauri::Builder::default()
         .setup(|_app| {
@@ -149,7 +154,7 @@ async fn main() {
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 
-    server.abort();
+    if let Some(server) = maybe_server { server.abort(); }
 }
 
 async fn handle_socket(socket: WebSocket, state: Shared) {
@@ -219,6 +224,8 @@ async fn handle_client_msg(conn_id: Uuid, cmd: ClientMsg, state: &Shared) {
             let mut guard = state.lock();
             if let Some((room_name, _player_id)) = guard.conns.get(&conn_id).cloned() {
                 if let Some(room) = guard.rooms.get_mut(&room_name) {
+                    // reset scores and state for a new game
+                    for pl in room.players.iter_mut() { pl.score = 0; }
                     room.round = 1;
                     room.cue_giver_idx = 0;
                     room.phase = Phase::Cue1;

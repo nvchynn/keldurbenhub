@@ -6,12 +6,21 @@
     <title>Хуи и куи</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Caveat:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
     <header class="app-header">
-      <h1>Хуи и куи</h1>
+      <div class="brand">
+        <picture>
+          <source srcset="icon.png" type="image/png" />
+          <img src="icon.ico" alt="Логотип" class="app-logo" />
+        </picture>
+        <svg class="app-logo-fallback" viewBox="0 0 24 24" aria-hidden="true">
+          <path fill="#fff" d="M12 2C7.03 2 3 6.03 3 11c0 2.93 1.58 5.49 3.94 6.93.36.22.6.59.62 1.01l.06 1.59c.05 1.19 1.34 1.92 2.4 1.33l1.4-.78c.32-.18.7-.23 1.06-.13.5.14 1.02.22 1.56.22 4.97 0 9-4.03 9-9S16.97 2 12 2Zm-5 9a1 1 0 1 1 0-2 1 1 0 0 1 0 2Zm3-3a1 1 0 1 1 0-2 1 1 0 0 1 0 2Zm4 0a1 1 0 1 1 0-2 1 1 0 0 1 0 2Zm3 3a1 1 0 1 1 0-2 1 1 0 0 1 0 2Zm-6.5 2.5c1.38 0 2.5 1.12 2.5 2.5 0 .83-.4 1.57-1.03 2.03-.28.2-.62.31-.97.31-.35 0-.69-.11-.97-.31A2.49 2.49 0 0 1 9.5 14.5Z"/>
+        </svg>
+        <span class="brand-name">KELDURBENCOLOR</span>
+      </div>
       <div class="controls">
         <span id="serverControls">
           <input id="selfName" type="text" placeholder="Ваше имя" />
@@ -42,11 +51,11 @@
           
           <div id="cueArea1" class="cue-area hidden">
             <input id="cueInput1" type="text" maxlength="20" placeholder="Подсказка 1 (1 слово)" />
-            <button id="lockCueBtn1" class="primary">Дать подсказку 1</button>
+            <button id="lockCueBtn1" class="primary">Дать подсказку</button>
           </div>
           <div id="cueArea2" class="cue-area hidden">
             <input id="cueInput2" type="text" maxlength="40" placeholder="Подсказка 2 (до 2 слов)" />
-            <button id="lockCueBtn2" class="primary">Дать подсказку 2</button>
+            <button id="lockCueBtn2" class="primary">Дать подсказку</button>
           </div>
           <div id="currentCue" class="current-cue hidden"></div>
         </div>
@@ -117,6 +126,15 @@
             <span class="color-name"></span>
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- Модалка победителя -->
+    <div id="winnerModal" class="modal hidden">
+      <div class="modal-content">
+        <h3 id="winnerTitle">Победитель</h3>
+        <p id="winnerText">Игрок набрал 15 очков и победил!</p>
+        <button id="newGameBtn" class="primary" style="margin-top:12px">Начать новую игру</button>
       </div>
     </div>
 
