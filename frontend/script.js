@@ -681,6 +681,8 @@
     state.cueGiverIndex = s.cue_giver ? players.findIndex(p => p.id === s.cue_giver) : 0;
     currentCueEl.textContent = [s.cue1, s.cue2].filter(Boolean).join(' / ');
     resetMarkers();
+    // очищаем прошлые бейджи очков
+    cells.forEach((el)=> el.removeAttribute('data-points'));
     clearSelectedMarkers();
     // Подсветка выбранного цвета у дающего (все фазы раунда)
     const isGiver = selfId && s.cue_giver && selfId === s.cue_giver;
@@ -752,10 +754,16 @@
       }
     }
     for (const idx of indices) if (typeof idx === 'number') cells[idx]?.classList.add('guess');
-    // В фазе reveal дополнительно подсветим цель
+    // В фазе reveal дополнительно подсветим цель и покажем очки вокруг цели (зоны 3/2/1)
     if (s.phase === 'reveal' && typeof s.target === 'number') {
       const targetIdx = s.target;
       cells[targetIdx]?.classList.add('target');
+      // Показать очки для всех клеток в радиусе Манхэттена <= 2 (3/2/1)
+      for (let i = 0; i < cells.length; i++) {
+        const d = manhattan(i, targetIdx);
+        const pts = scoreByDistance(d);
+        if (pts > 0) cells[i]?.setAttribute('data-points', String(pts));
+      }
     }
     // Логи по изменениям состояния
     if (prevServerRound !== s.round) {

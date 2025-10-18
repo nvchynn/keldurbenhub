@@ -92,6 +92,23 @@ input[type="text"] { flex: 1; background: #0b0e17; border: 1px solid rgba(255,25
 .log { display: grid; gap: 10px; max-height: 350px; overflow: auto; font-size: 18px; }
 .log-entry { background: #0f1320; padding: 12px 14px; border-radius: 8px; color: var(--muted); }
 
+/* Themed scrollbar for History panel */
+.log { 
+  scrollbar-width: thin; /* Firefox */
+  scrollbar-color: var(--primary) rgba(255,255,255,0.08);
+}
+.log::-webkit-scrollbar { width: 10px; height: 10px; }
+.log::-webkit-scrollbar-track { background: rgba(255,255,255,0.06); border-radius: 10px; }
+.log::-webkit-scrollbar-thumb { 
+  background: linear-gradient(180deg, var(--primary), #7aa7ff);
+  border-radius: 10px; 
+  border: 2px solid rgba(0,0,0,0.35);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.15);
+}
+.log::-webkit-scrollbar-thumb:hover { 
+  background: linear-gradient(180deg, var(--primary-600), var(--primary));
+}
+
 .board-wrap { 
   display: flex; 
   justify-content: center; 
@@ -220,6 +237,25 @@ input[type="text"] { flex: 1; background: #0b0e17; border: 1px solid rgba(255,25
   border-radius: calc(var(--cell-size) * 0.17); 
   display: none; 
   box-shadow: 0 0 0 calc(var(--cell-size) * 0.02) rgba(255,255,255,0.55), 0 0 calc(var(--cell-size) * 0.25) rgba(255,255,255,0.35);
+}
+.cell[data-points]::after {
+  content: attr(data-points);
+  position: absolute;
+  right: calc(var(--cell-pad) * 0.4);
+  bottom: calc(var(--cell-pad) * 0.35);
+  transform: translate(10%, 10%);
+  background: rgba(0,0,0,0.55);
+  color: #fff;
+  font-weight: 700;
+  font-size: calc(var(--cell-size) * 0.42);
+  line-height: 1;
+  padding: 2px 6px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.35);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.35);
+  z-index: 3;
+  pointer-events: none;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.5);
 }
 .cell.guess .marker { display: block; border-color: #ffd54a; box-shadow: 0 0 0 calc(var(--cell-size) * 0.02) rgba(255,213,74,0.55), 0 0 calc(var(--cell-size) * 0.25) rgba(255,213,74,0.35); animation: pop .18s ease; }
 .cell.target .marker { display: block; border-color: #ff5c5c; box-shadow: 0 0 0 calc(var(--cell-size) * 0.02) rgba(255,92,92,0.6), 0 0 calc(var(--cell-size) * 0.25) rgba(255,92,92,0.35); animation: pop .18s ease; }
