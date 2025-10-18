@@ -164,7 +164,7 @@ async fn handle_socket(socket: WebSocket, state: Shared) {
         let mut guard = state.lock();
         guard.txs.insert(conn_id, msg_tx.clone());
     }
-    let _ = msg_tx.send(Message::Text(serde_json::to_string(&ServerMsg::Welcome { id: conn_id, room: "default".into() }).unwrap()));
+    // welcome will be sent after Join with the actual player_id
 
     while let Some(Ok(msg)) = rx.next().await {
         if let Message::Text(text) = msg {
@@ -201,6 +201,12 @@ async fn handle_client_msg(conn_id: Uuid, cmd: ClientMsg, state: &Shared) {
             let player_id = Uuid::new_v4();
             room_entry.players.push(Player { id: player_id, name: name.clone(), score: 0 });
             guard.conns.insert(conn_id, (room_name.clone(), player_id));
+            // send welcome with assigned player_id
+            if let Some(tx) = guard.txs.get(&conn_id) {
+                let _ = tx.send(Message::Text(
+                    serde_json::to_string(&ServerMsg::Welcome { id: player_id, room: room_name.clone() }).unwrap()
+                ));
+            }
             broadcast_state(room_name, &guard);
         }
         ClientMsg::StartGame => {
