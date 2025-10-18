@@ -27,7 +27,7 @@ desktop = [
   "dep:tauri-plugin-shell"
 ]
 
-[target.'cfg(feature = "desktop")'.build-dependencies]
+[build-dependencies]
 tauri-build = { version = "2", features = [] }
 
 

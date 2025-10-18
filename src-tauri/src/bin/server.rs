@@ -19,6 +19,7 @@ enum ClientMsg {
     LockCue2 { cue2: String },
     Guess { cell: usize },
     NextRound,
+    ChooseTarget { index: usize },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -43,6 +44,7 @@ struct GameStateDto {
     cue1: Option<String>,
     cue2: Option<String>,
     target: Option<usize>, // revealed to all only in reveal phase
+    select_options: Option<Vec<usize>>, // shown only for cue giver on client side
     players: Vec<PlayerDto>,
     guessed_once: HashSet<Uuid>,
     guessed_twice: HashSet<Uuid>,
@@ -62,7 +64,8 @@ struct RoomState {
     phase: Phase,
     cue1: Option<String>,
     cue2: Option<String>,
-    target: usize,
+    target: Option<usize>,
+    select_options: Option<Vec<usize>>, // candidate cells for cue giver selection
     players: Vec<Player>,
     guessed_once: HashSet<Uuid>,
     guessed_twice: HashSet<Uuid>,
@@ -94,7 +97,8 @@ fn default_room() -> RoomState {
         phase: Phase::Lobby,
         cue1: None,
         cue2: None,
-        target: rand_index(30, 18),
+        target: None,
+        select_options: None,
         players: vec![],
         guessed_once: HashSet::new(),
         guessed_twice: HashSet::new(),
@@ -204,7 +208,8 @@ async fn handle_client_msg(conn_id: Uuid, cmd: ClientMsg, state: &Shared) {
                     room.cue_giver_idx = 0;
                     room.phase = Phase::Cue1;
                     room.cue1 = None; room.cue2 = None;
-                    room.target = rand_index(room.cols, room.rows);
+                    room.target = None;
+                    room.select_options = Some(rand_unique_indices(room.cols, room.rows, 4));
                     room.guessed_once.clear(); room.guessed_twice.clear();
                     room.guess1_cells.clear(); room.guess2_cells.clear();
                 }
@@ -235,6 +240,24 @@ async fn handle_client_msg(conn_id: Uuid, cmd: ClientMsg, state: &Shared) {
                 broadcast_state(room_name, &guard);
             }
         }
+        ClientMsg::ChooseTarget { index } => {
+            let mut guard = state.lock();
+            if let Some((room_name, player_id)) = guard.conns.get(&conn_id).cloned() {
+                if let Some(room) = guard.rooms.get_mut(&room_name) {
+                    let cue_id = room.players.get(room.cue_giver_idx).map(|p| p.id);
+                    // Only cue giver can choose and index must be in options
+                    if Some(player_id) == cue_id {
+                        if let Some(opts) = &room.select_options {
+                            if opts.contains(&index) {
+                                room.target = Some(index);
+                                room.select_options = None;
+                            }
+                        }
+                    }
+                }
+                broadcast_state(room_name, &guard);
+            }
+        }
         ClientMsg::Guess { cell } => {
             let mut guard = state.lock();
             if let Some((room_name, player_id)) = guard.conns.get(&conn_id).cloned() {
@@ -257,7 +280,7 @@ async fn handle_client_msg(conn_id: Uuid, cmd: ClientMsg, state: &Shared) {
                         room.phase = match room.phase { Phase::Guess1 => Phase::Cue2, Phase::Guess2 => Phase::Reveal, x => x };
                         if matches!(room.phase, Phase::Reveal) {
                             // scoring based on second guesses
-                            let target = room.target;
+                            let target = room.target.unwrap_or_else(|| rand_index(room.cols, room.rows));
                             for pl in room.players.iter_mut() {
                                 if let Some(&gcell) = room.guess2_cells.get(&pl.id) {
                                     let d = manhattan(gcell, target, room.cols as usize);
@@ -279,7 +302,8 @@ async fn handle_client_msg(conn_id: Uuid, cmd: ClientMsg, state: &Shared) {
                     room.cue_giver_idx = (room.cue_giver_idx + 1) % room.players.len().max(1);
                     room.phase = Phase::Cue1;
                     room.cue1 = None; room.cue2 = None;
-                    room.target = rand_index(room.cols, room.rows);
+                    room.target = None;
+                    room.select_options = Some(rand_unique_indices(room.cols, room.rows, 4));
                     room.guessed_once.clear(); room.guessed_twice.clear();
                     room.guess1_cells.clear(); room.guess2_cells.clear();
                 }
@@ -300,7 +324,8 @@ fn broadcast_state(room_name: String, guard: &AppState) {
             phase: match room.phase { Phase::Lobby=>"lobby", Phase::Cue1=>"cue1", Phase::Guess1=>"guess1", Phase::Cue2=>"cue2", Phase::Guess2=>"guess2", Phase::Reveal=>"reveal" }.into(),
             cue1: room.cue1.clone(),
             cue2: room.cue2.clone(),
-            target: if matches!(room.phase, Phase::Reveal) { Some(room.target) } else { None },
+            target: if matches!(room.phase, Phase::Reveal) { room.target } else { None },
+            select_options: room.select_options.clone(),
             players: room.players.iter().map(|p| PlayerDto{ id: p.id, name: p.name.clone(), score: p.score }).collect(),
             guessed_once: room.guessed_once.clone(),
             guessed_twice: room.guessed_twice.clone(),
@@ -323,6 +348,16 @@ fn manhattan(a_idx: usize, b_idx: usize, cols: usize) -> i32 {
 
 fn score_by_distance(d: i32) -> i32 {
     if d == 0 { 3 } else if d == 1 { 2 } else if d == 2 { 1 } else { 0 }
+}
+
+fn rand_unique_indices(cols: u32, rows: u32, count: usize) -> Vec<usize> {
+    use std::collections::HashSet;
+    let total = (cols * rows) as usize;
+    let mut set: HashSet<usize> = HashSet::new();
+    while set.len() < count.min(total) {
+        set.insert(rand_index(cols, rows));
+    }
+    set.into_iter().collect()
 }
 
 

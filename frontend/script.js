@@ -53,7 +53,8 @@
   let availableColors = []; // массив из 4 случайных цветов
   let selfId = null;
   let ws = null;
-  let offline = true; // Переключаемый режим
+  // Переключаемый режим: читаем начальное состояние из чекбокса (по умолчанию онлайн, если чекбокс не установлен)
+  let offline = offlineModeInput ? offlineModeInput.checked : true;
   /** @type {GameState} */
   let state = {
     round: 0,
@@ -172,9 +173,6 @@
   function showColorSelectionModal() {
     console.log('=== showColorSelectionModal() START ===');
     try {
-      generateRandomColors();
-      console.log('Generated colors:', availableColors);
-      
       const modal = document.getElementById('colorSelectionModal');
       console.log('Modal element found:', !!modal);
       
@@ -185,17 +183,34 @@
       const colorOptions = modal.querySelectorAll('.color-option');
       console.log('Color options found:', colorOptions.length);
       
+      // Источник опций: онлайн берём с сервера, офлайн — генерируем локально
+      let opts = [];
+      if (isOnline() && window.__serverState?.select_options) {
+        const indices = window.__serverState.select_options;
+        opts = indices.map(idx => {
+          const r = Math.floor(idx / COLS);
+          const c = idx % COLS;
+          const rowLetter = String.fromCharCode(65 + r);
+          const colNumber = c + 1;
+          const cell = cells[idx];
+          return { index: idx, name: `${rowLetter}${colNumber}`, color: cell?.style.background || '#000' };
+        });
+        availableColors = opts;
+      } else {
+        generateRandomColors();
+        opts = availableColors;
+      }
+
       colorOptions.forEach((option, index) => {
         const preview = option.querySelector('.color-preview');
         const name = option.querySelector('.color-name');
-        
-        if (preview && name && availableColors[index]) {
-          preview.style.background = availableColors[index].color;
-          name.textContent = availableColors[index].name;
+        const data = opts[index];
+        if (preview && name && data) {
+          preview.style.background = data.color;
+          name.textContent = data.name;
           option.onclick = () => selectColor(index);
-          console.log(`Option ${index}: ${availableColors[index].name} (${availableColors[index].color})`);
         } else {
-          console.error(`Missing elements for option ${index}`);
+          option.onclick = null;
         }
       });
       
@@ -224,15 +239,17 @@
     // Закрываем модальное окно через небольшую задержку
     setTimeout(() => {
       modal.classList.add('hidden');
-      console.log('Modal closed, calling showSelectedColorForCueGiver');
-      // Показываем выбранный цвет игроку
-      showSelectedColorForCueGiver();
-      
-      // Передаем ход игроку, который будет давать подсказки
-      currentPlayerId = players[state.cueGiverIndex].id;
-      console.log('Turn passed to cue giver:', players[state.cueGiverIndex].name);
-      updateUIState();
-    }, 500);
+      console.log('Modal closed');
+      // Показываем выбранный цвет игроку (офлайн) и/или отправляем выбор на сервер (онлайн)
+      if (isOnline()) {
+        const chosen = availableColors[colorIndex];
+        if (chosen) wsSend({ type: 'choose_target', index: chosen.index });
+      } else {
+        showSelectedColorForCueGiver();
+        currentPlayerId = players[state.cueGiverIndex].id;
+        updateUIState();
+      }
+    }, 300);
   }
 
   function showSelectedColorForCueGiver() {
@@ -289,54 +306,67 @@
     });
   }
 
+  function isOnline() {
+    return !offline && ws && ws.readyState === WebSocket.OPEN;
+  }
+
   function updateUIState() {
-    const phase = state.phase;
+    const online = isOnline();
+    const s = window.__serverState;
+    const phase = online ? (s?.phase || 'lobby') : state.phase;
     console.log('updateUIState called, phase:', phase);
     
     if (phase === 'lobby' || phase === 'setup') {
-      roundInfoEl.textContent = 'Добавьте игроков и нажмите Старт.';
+      roundInfoEl.textContent = online ? 'Ожидание игроков. Нажмите Старт.' : 'Добавьте игроков и нажмите Старт.';
       cueArea1El.classList.add('hidden');
       cueArea2El.classList.add('hidden');
       currentCueEl.classList.add('hidden');
       nextRoundBtn.disabled = true;
-      addPlayerSectionEl.style.display = 'flex';
-      startGameBtn.disabled = false;
+      addPlayerSectionEl.style.display = online ? 'none' : 'flex';
+      startGameBtn.disabled = online ? false : false;
     } else if (phase === 'cue1') {
-      const giver = players[state.cueGiverIndex];
-      roundInfoEl.textContent = `Раунд ${state.round}. Подсказку #1 даёт: ${giver?.name ?? ''}`;
-      const isGiver = giver && currentPlayerId === giver.id;
+      const giverIdx = online ? players.findIndex(p => p.id === s?.cue_giver) : state.cueGiverIndex;
+      const giver = players[giverIdx];
+      const roundNum = online ? (s?.round ?? 0) : state.round;
+      roundInfoEl.textContent = `Раунд ${roundNum}. Подсказку #1 даёт: ${giver?.name ?? ''}`;
+      const isGiver = online ? (giver && selfId && giver.id === selfId) : (giver && currentPlayerId === giver.id);
       cueArea1El.classList.toggle('hidden', !isGiver);
       cueArea2El.classList.add('hidden');
       currentCueEl.classList.add('hidden');
       nextRoundBtn.disabled = true;
       if (isGiver) { cueInput1El.value = ''; cueInput1El.focus(); }
     } else if (phase === 'guess1') {
-      const giver = players[state.cueGiverIndex];
-      const currentPlayer = players.find(p => p.id === currentPlayerId);
-      roundInfoEl.textContent = `Раунд ${state.round}. Подсказка #1 от ${giver?.name ?? ''}. Первая волна догадок. Ход: ${currentPlayer?.name ?? 'Игрок'}`;
+      const giverIdx = online ? players.findIndex(p => p.id === s?.cue_giver) : state.cueGiverIndex;
+      const giver = players[giverIdx];
+      const roundNum = online ? (s?.round ?? 0) : state.round;
+      roundInfoEl.textContent = `Раунд ${roundNum}. Подсказка #1 от ${giver?.name ?? ''}. Первая волна догадок.`;
       cueArea1El.classList.add('hidden');
       cueArea2El.classList.add('hidden');
       currentCueEl.classList.remove('hidden');
       nextRoundBtn.disabled = true;
     } else if (phase === 'cue2') {
-      const giver = players[state.cueGiverIndex];
-      roundInfoEl.textContent = `Раунд ${state.round}. Подсказку #2 даёт: ${giver?.name ?? ''}`;
-      const isGiver = giver && currentPlayerId === giver.id;
+      const giverIdx = online ? players.findIndex(p => p.id === s?.cue_giver) : state.cueGiverIndex;
+      const giver = players[giverIdx];
+      const roundNum = online ? (s?.round ?? 0) : state.round;
+      roundInfoEl.textContent = `Раунд ${roundNum}. Подсказку #2 даёт: ${giver?.name ?? ''}`;
+      const isGiver = online ? (giver && selfId && giver.id === selfId) : (giver && currentPlayerId === giver.id);
       cueArea1El.classList.add('hidden');
       cueArea2El.classList.toggle('hidden', !isGiver);
       currentCueEl.classList.remove('hidden');
       nextRoundBtn.disabled = true;
       if (isGiver) { cueInput2El.value = ''; cueInput2El.focus(); }
     } else if (phase === 'guess2') {
-      const giver = players[state.cueGiverIndex];
-      const currentPlayer = players.find(p => p.id === currentPlayerId);
-      roundInfoEl.textContent = `Раунд ${state.round}. Подсказка #2 от ${giver?.name ?? ''}. Вторая волна догадок. Ход: ${currentPlayer?.name ?? 'Игрок'}`;
+      const giverIdx = online ? players.findIndex(p => p.id === s?.cue_giver) : state.cueGiverIndex;
+      const giver = players[giverIdx];
+      const roundNum = online ? (s?.round ?? 0) : state.round;
+      roundInfoEl.textContent = `Раунд ${roundNum}. Подсказка #2 от ${giver?.name ?? ''}. Вторая волна догадок.`;
       cueArea1El.classList.add('hidden');
       cueArea2El.classList.add('hidden');
       currentCueEl.classList.remove('hidden');
       nextRoundBtn.disabled = true;
     } else if (phase === 'reveal') {
-      roundInfoEl.textContent = `Раунд ${state.round} завершён.`;
+      const roundNum = online ? (s?.round ?? 0) : state.round;
+      roundInfoEl.textContent = `Раунд ${roundNum} завершён.`;
       cueArea1El.classList.add('hidden');
       cueArea2El.classList.add('hidden');
       currentCueEl.classList.remove('hidden');
@@ -358,7 +388,11 @@
   }
 
   function startGame() {
-    startOfflineGame();
+    if (isOnline()) {
+      wsSend({ type: 'start_game' });
+    } else {
+      startOfflineGame();
+    }
   }
 
   function startOfflineGame() {
@@ -405,25 +439,31 @@
   function lockCue1() {
     const cue = (cueInput1El.value || '').trim();
     if (!cue || cue.split(/\s+/).length !== 1) { alert('Подсказка #1 — одно слово.'); return; }
-    state.cue1 = cue;
-    currentCueEl.textContent = cue;
-    showTargetForCueGiver(false); // Скрываем подсветку после дачи подсказки
-    state.phase = 'guess1';
-    // Передаем ход следующему игроку для догадок
-    const nextPlayerIndex = (state.cueGiverIndex + 1) % players.length;
-    currentPlayerId = players[nextPlayerIndex].id;
-    updateUIState();
+    if (isOnline()) {
+      wsSend({ type: 'lock_cue1', cue });
+    } else {
+      state.cue1 = cue;
+      currentCueEl.textContent = cue;
+      showTargetForCueGiver(false); // Скрываем подсветку после дачи подсказки
+      state.phase = 'guess1';
+      const nextPlayerIndex = (state.cueGiverIndex + 1) % players.length;
+      currentPlayerId = players[nextPlayerIndex].id;
+      updateUIState();
+    }
   }
   function lockCue2() {
     const cue2 = (cueInput2El.value || '').trim();
     if (!cue2 || cue2.split(/\s+/).length > 2) { alert('Подсказка #2 — до двух слов.'); return; }
-    state.cue2 = cue2;
-    currentCueEl.textContent = [state.cue1, cue2].filter(Boolean).join(' / ');
-    state.phase = 'guess2';
-    // Передаем ход следующему игроку для догадок
-    const nextPlayerIndex = (state.cueGiverIndex + 1) % players.length;
-    currentPlayerId = players[nextPlayerIndex].id;
-    updateUIState();
+    if (isOnline()) {
+      wsSend({ type: 'lock_cue2', cue2 });
+    } else {
+      state.cue2 = cue2;
+      currentCueEl.textContent = [state.cue1, cue2].filter(Boolean).join(' / ');
+      state.phase = 'guess2';
+      const nextPlayerIndex = (state.cueGiverIndex + 1) % players.length;
+      currentPlayerId = players[nextPlayerIndex].id;
+      updateUIState();
+    }
   }
 
   function idxToRC(idx) {
@@ -528,7 +568,7 @@
     
     console.log('✅ Button is enabled, calling nextRound()');
     try {
-      nextRound();
+      if (isOnline()) wsSend({ type: 'next_round' }); else nextRound();
       console.log('✅ nextRound() completed successfully');
     } catch (error) {
       console.error('❌ Error in nextRound():', error);
@@ -657,6 +697,16 @@
 
   function onCellClick(idx) {
     console.log('Cell clicked:', idx);
+    if (isOnline()) {
+      const s = window.__serverState || {};
+      if (s.phase === 'guess1' || s.phase === 'guess2') {
+        // блокируем клики у дающего подсказку
+        if (selfId && s.cue_giver && selfId === s.cue_giver) return;
+        wsSend({ type: 'guess', cell: idx });
+        cells[idx]?.classList.add('guess');
+      }
+      return;
+    }
     if (state.phase === 'guess1' || state.phase === 'guess2') {
       const active = players.filter((_, i)=> i !== state.cueGiverIndex);
       const map = state.phase === 'guess1' ? state.guesses : state.guesses2;
