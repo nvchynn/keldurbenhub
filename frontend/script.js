@@ -55,6 +55,13 @@
   let ws = null;
   // Переключаемый режим: читаем начальное состояние из чекбокса (по умолчанию онлайн, если чекбокс не установлен)
   let offline = offlineModeInput ? offlineModeInput.checked : true;
+  // Чтобы не показывать модалку выбора цвета много раз за один и тот же раунд (в онлайне)
+  let modalShownRound = null;
+  // Предыдущее серверное состояние для логов
+  let prevServerPhase = null;
+  let prevServerRound = null;
+  let prevServerCue1 = null;
+  let prevServerTarget = null;
   /** @type {GameState} */
   let state = {
     round: 0,
@@ -335,6 +342,20 @@
       currentCueEl.classList.add('hidden');
       nextRoundBtn.disabled = true;
       if (isGiver) { cueInput1El.value = ''; cueInput1El.focus(); }
+
+      // Онлайновая модалка выбора цвета только у дающего, один раз на раунд
+      if (online) {
+        const hasOptions = Array.isArray(s?.select_options) && s.select_options.length > 0;
+        const targetNotChosen = !s?.target;
+        if (isGiver && hasOptions && targetNotChosen && s.round !== modalShownRound) {
+          try {
+            showColorSelectionModal();
+            modalShownRound = s.round;
+          } catch (e) {
+            console.error('Failed to show color selection modal:', e);
+          }
+        }
+      }
     } else if (phase === 'guess1') {
       const giverIdx = online ? players.findIndex(p => p.id === s?.cue_giver) : state.cueGiverIndex;
       const giver = players[giverIdx];
@@ -674,13 +695,41 @@
     state.cueGiverIndex = s.cue_giver ? players.findIndex(p => p.id === s.cue_giver) : 0;
     currentCueEl.textContent = [s.cue1, s.cue2].filter(Boolean).join(' / ');
     resetMarkers();
+    // Подсветка выбранного цвета у дающего (до reveal)
+    if ((s.phase === 'cue1' || s.phase === 'guess1' || s.phase === 'cue2' || s.phase === 'guess2') && s.target != null && selfId && s.cue_giver === selfId) {
+      const idx = s.target;
+      if (typeof idx === 'number') cells[idx]?.classList.add('selected');
+    }
     if (s.phase === 'reveal' && s.target != null) {
       const targetIdx = s.target;
       cells[targetIdx]?.classList.add('target');
       const guesses = s.last_guesses || [];
       for (const [, idx] of guesses) cells[idx]?.classList.add('guess');
-      if (s.best_guess != null) cells[s.best_guess]?.classList.add('best');
+      // best guess рассчитываем на сервере; клиент может подсветить его по желанию
     }
+    // Логи по изменениям состояния
+    if (prevServerRound !== s.round) {
+      log(`— Раунд ${s.round} —`);
+      modalShownRound = null; // сбрасываем флаг показа модалки на новый раунд
+    }
+    if (!prevServerCue1 && s.cue1) {
+      log(`Подсказка #1: ${s.cue1}`);
+    }
+    if (prevServerPhase !== s.phase) {
+      const phaseName = { lobby: 'Лобби', cue1: 'Подсказка #1', guess1: 'Первая волна догадок', cue2: 'Подсказка #2', guess2: 'Вторая волна догадок', reveal: 'Результаты' }[s.phase] || s.phase;
+      log(`Фаза: ${phaseName}`);
+    }
+    if (!prevServerTarget && s.target && s.phase !== 'reveal' && selfId && s.cue_giver === selfId) {
+      // дающий выбрал цвет
+      const idx = s.target;
+      const rowLetter = String.fromCharCode(65 + Math.floor(idx / COLS));
+      const colNumber = (idx % COLS) + 1;
+      log(`Вы выбрали цвет ${rowLetter}${colNumber}`);
+    }
+    prevServerRound = s.round;
+    prevServerPhase = s.phase;
+    prevServerCue1 = s.cue1;
+    prevServerTarget = s.target;
     updateUIState();
   }
 
