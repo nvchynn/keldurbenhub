@@ -11,7 +11,7 @@
   --sidebar-width: 420px;
   --page-padding: 24px;
   --header-footer-total: 110px; /* header + footer */
-  --safety: 0.88; /* чуть компактнее вся доска */
+  --safety: 0.82; /* компактность доски */
   --board-radius: 14px;
 }
 
@@ -104,24 +104,19 @@ input[type="text"] { flex: 1; background: #0b0e17; border: 1px solid rgba(255,25
 .board-container {
   --cols: 30;
   --rows: 18;
-  /* Учитываем боковые/верхние координаты и промежутки, чтобы не выходить за рамки */
-  --gap: max(2px, calc(var(--cell-size) * 0.06));
-  --coord-size: calc(var(--cell-size) * 0.7);
-  --extra-x: calc(var(--coord-size) * 2 + var(--gap) * 6);
-  --extra-y: calc(var(--coord-size) * 2 + var(--gap) * 6);
-  /* сначала черновая оценка размера клетки по доступной ширине/высоте колонки */
+  /* базовые размеры без циклических зависимостей */
   --cell-size: clamp(
     10px,
     min(
-      calc((100vw - var(--sidebar-width) - (var(--page-padding) * 2) - var(--extra-x)) / var(--cols) * var(--safety)),
-      calc((100dvh - var(--header-footer-total) - (var(--page-padding) * 2) - var(--extra-y)) / var(--rows) * var(--safety))
+      calc((100vw - var(--sidebar-width) - (var(--page-padding) * 2)) / var(--cols) * var(--safety)),
+      calc((100dvh - var(--header-footer-total) - (var(--page-padding) * 2)) / var(--rows) * var(--safety))
     ),
-    48px
+    36px
   );
-  /* отдельные зазоры по горизонтали/вертикали */
+  --gap: max(2px, calc(var(--cell-size) * 0.06));
+  --coord-size: calc(var(--cell-size) * 0.7);
   --gap-x: calc(var(--gap) * 1.35);
   --gap-y: var(--gap);
-  /* внутренний отступ внутри клетки (чтобы у каждой клетки был «просвет» со всех сторон) */
   --cell-pad: calc(var(--cell-size) * 0.10);
   
   display: flex;
@@ -150,6 +145,7 @@ input[type="text"] { flex: 1; background: #0b0e17; border: 1px solid rgba(255,25
   border: 1px solid rgba(255,255,255,0.12);
   border-radius: var(--board-radius);
   box-shadow: 0 10px 24px rgba(0,0,0,0.35), inset 0 0 0 1px rgba(255,255,255,0.04);
+  width: max-content;
   max-width: 100%;
 }
 
@@ -228,7 +224,7 @@ input[type="text"] { flex: 1; background: #0b0e17; border: 1px solid rgba(255,25
 .cell.guess .marker { display: block; border-color: #ffd54a; box-shadow: 0 0 0 calc(var(--cell-size) * 0.02) rgba(255,213,74,0.55), 0 0 calc(var(--cell-size) * 0.25) rgba(255,213,74,0.35); animation: pop .18s ease; }
 .cell.target .marker { display: block; border-color: #ff5c5c; box-shadow: 0 0 0 calc(var(--cell-size) * 0.02) rgba(255,92,92,0.6), 0 0 calc(var(--cell-size) * 0.25) rgba(255,92,92,0.35); animation: pop .18s ease; }
 .cell.best .marker { display: block; border-color: #3bd671; box-shadow: 0 0 0 calc(var(--cell-size) * 0.02) rgba(59,214,113,0.6), 0 0 calc(var(--cell-size) * 0.25) rgba(59,214,113,0.35); animation: pop .18s ease; }
-.cell.selected .marker { display: block; border-color: white; border-width: calc(var(--cell-size) * 0.12); animation: pop .2s ease; }
+.cell.selected .marker { display: block; border-color: white; border-width: calc(var(--cell-size) * 0.09); animation: pop .2s ease; }
 
 @keyframes pop {
   from { transform: scale(.6); opacity: 0; }
@@ -242,7 +238,7 @@ input[type="text"] { flex: 1; background: #0b0e17; border: 1px solid rgba(255,25
     padding: 8px;
   }
   .board-container {
-    /* sidebar collapses; allow a bit more vertical space for panels */
+    /* sidebar collapses; allow a bit more вертикального места для панелей */
     --cell-size: clamp(8px,
       min(
         calc((100vw - 40px) / var(--cols) * var(--safety)),
@@ -251,13 +247,8 @@ input[type="text"] { flex: 1; background: #0b0e17; border: 1px solid rgba(255,25
       24px
     );
   }
-  .sidebar {
-    order: 2;
-  }
-  .board-wrap {
-    order: 1;
-    padding: 8px;
-  }
+  .sidebar { order: 2; }
+  .board-wrap { order: 1; padding: 8px; }
 }
 
 /* Для очень маленьких экранов */
@@ -283,7 +274,7 @@ input[type="text"] { flex: 1; background: #0b0e17; border: 1px solid rgba(255,25
         calc((100vw - var(--sidebar-width) - (var(--page-padding) * 2)) / var(--cols) * var(--safety)),
         calc((100dvh - var(--header-footer-total) - (var(--page-padding) * 2)) / var(--rows) * var(--safety))
       ),
-      64px
+      48px
     );
   }
 }
@@ -296,7 +287,7 @@ input[type="text"] { flex: 1; background: #0b0e17; border: 1px solid rgba(255,25
         calc((100vw - var(--sidebar-width) - (var(--page-padding) * 2)) / var(--cols) * var(--safety)),
         calc((100dvh - var(--header-footer-total) - (var(--page-padding) * 2)) / var(--rows) * var(--safety))
       ),
-      72px
+      56px
     );
   }
 }

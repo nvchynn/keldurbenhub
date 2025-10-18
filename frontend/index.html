@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Хуи и куи (локально)</title>
+    <title>Хуи и куи</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -13,10 +13,7 @@
     <header class="app-header">
       <h1>Хуи и куи</h1>
       <div class="controls">
-              <label class="toggle"><input id="offlineMode" type="checkbox" /> Офлайн</label>
         <span id="serverControls">
-          <input id="serverUrl" type="text" value="ws://localhost:8765/ws" aria-label="WS URL" />
-          <input id="roomInput" type="text" placeholder="Комната (опц.)" />
           <input id="selfName" type="text" placeholder="Ваше имя" />
           <button id="connectBtn" class="secondary">Подключиться</button>
         </span>
@@ -27,6 +24,11 @@
     <main class="layout">
       <section class="sidebar">
         <div class="panel">
+          <h2>Текущий раунд</h2>
+          <div id="roundInfo" class="round-info"></div>
+          <button id="nextRoundBtn" class="primary" disabled>Следующий раунд</button>
+        </div>
+        <div class="panel">
           <h2>Игроки</h2>
           <div id="playersList" class="players-list"></div>
           <div id="addPlayerSection" class="add-player">
@@ -36,12 +38,8 @@
         </div>
 
         <div class="panel">
-          <h2>Раунд</h2>
-          <div id="roundInfo" class="round-info"></div>
-          <button id="nextRoundBtn" class="primary" disabled>Следующий раунд</button>
-          <button id="forceEndRoundBtn" class="secondary" style="margin-top: 8px; font-size: 14px; padding: 8px 12px;">Завершить раунд принудительно</button>
-          <button id="debugStateBtn" class="secondary" style="margin-top: 8px; font-size: 14px; padding: 8px 12px;">Показать состояние игры</button>
-          <button id="regenerateBoardBtn" class="secondary" style="margin-top: 8px; font-size: 14px; padding: 8px 12px;">Перегенерировать доску</button>
+          <h2>Подсказки</h2>
+          
           <div id="cueArea1" class="cue-area hidden">
             <input id="cueInput1" type="text" maxlength="20" placeholder="Подсказка 1 (1 слово)" />
             <button id="lockCueBtn1" class="primary">Дать подсказку 1</button>
@@ -94,9 +92,7 @@
       </section>
     </main>
 
-    <footer class="app-footer">
-      <div>Локальная версия для игры за одним устройством</div>
-    </footer>
+    <footer class="app-footer"></footer>
 
     <!-- Модальное окно выбора цвета -->
     <div id="colorSelectionModal" class="modal hidden">

@@ -19,16 +19,13 @@
   const playerNameInput = document.getElementById('playerNameInput');
   const addPlayerBtn = document.getElementById('addPlayerBtn');
   // Элементы UI, включая онлайн-управление
-  const serverUrlInput = document.getElementById('serverUrl');
-  const roomInput = document.getElementById('roomInput');
+  const FIXED_WS_URL = 'ws://185.177.219.234:8765/ws';
+  // roomInput убран из UI; комната не используется
   const selfNameInput = document.getElementById('selfName');
-  const offlineModeInput = document.getElementById('offlineMode');
   const connectBtn = document.getElementById('connectBtn');
   const startGameBtn = document.getElementById('startGameBtn');
   const nextRoundBtn = document.getElementById('nextRoundBtn');
-  const forceEndRoundBtn = document.getElementById('forceEndRoundBtn');
-  const debugStateBtn = document.getElementById('debugStateBtn');
-  const regenerateBoardBtn = document.getElementById('regenerateBoardBtn');
+  // удалены тестовые кнопки: forceEndRound/debugState/regenerateBoard
   const roundInfoEl = document.getElementById('roundInfo');
   const cueArea1El = document.getElementById('cueArea1');
   const cueInput1El = document.getElementById('cueInput1');
@@ -38,6 +35,8 @@
   const lockCueBtn2 = document.getElementById('lockCueBtn2');
   const currentCueEl = document.getElementById('currentCue');
   const logEl = document.getElementById('log');
+  // Всегда прячем локальную секцию добавления игроков (онлайн-режим только)
+  if (addPlayerSectionEl) addPlayerSectionEl.style.display = 'none';
 
   // Configurable board size via CSS variables
   const COLS = 30;
@@ -53,8 +52,8 @@
   let availableColors = []; // массив из 4 случайных цветов
   let selfId = null;
   let ws = null;
-  // Переключаемый режим: читаем начальное состояние из чекбокса (по умолчанию онлайн, если чекбокс не установлен)
-  let offline = offlineModeInput ? offlineModeInput.checked : true;
+  // Всегда онлайн
+  let offline = false;
   // Чтобы не показывать модалку выбора цвета много раз за один и тот же раунд (в онлайне)
   let modalShownRound = null;
   // Предыдущее серверное состояние для логов
@@ -62,6 +61,9 @@
   let prevServerRound = null;
   let prevServerCue1 = null;
   let prevServerTarget = null;
+  // Локальная подсветка выбранного индекса до того, как сервер пришлёт target (только для дающего)
+  let localSelectedIdx = null;
+  let localSelectedRound = null;
   /** @type {GameState} */
   let state = {
     round: 0,
@@ -142,12 +144,26 @@
     
     console.log('Board generated with', cells.length, 'cells');
     console.log('=== BOARD GENERATION COMPLETE ===');
+    // Если уже есть состояние сервера, повторно применим его, чтобы восстановить подсветки
+    if (window.__serverState) {
+      try {
+        applyServerState(window.__serverState);
+      } catch (e) {
+        console.warn('Reapply server state after board generation failed:', e);
+      }
+    }
   }
   
   const cells = [];
 
   // Создаем координаты
   createCoordinates();
+  // Сразу генерируем доску (не ждём DOMContentLoaded, так как скрипт внизу body)
+  try {
+    generateBoard();
+  } catch (e) {
+    console.warn('Initial board generation failed:', e);
+  }
 
   // Функции для модального окна выбора цвета
   function generateRandomColors() {
@@ -243,11 +259,23 @@
     // Выделяем выбранную опцию
     colorOptions[colorIndex].classList.add('selected');
     
-    // Закрываем модальное окно через небольшую задержку
+    // Сразу фиксируем локальный выбор и подсвечиваем без ожидания, чтобы не было мерцания
+    if (isOnline()) {
+      const chosen = availableColors[colorIndex];
+      if (chosen) {
+        try {
+          const s = window.__serverState || {};
+          localSelectedIdx = chosen.index;
+          localSelectedRound = typeof s.round === 'number' ? s.round : null;
+        } catch {}
+        // Мягкая подсветка сразу (без resetMarkers, чтобы не убирать другие метки)
+        cells[chosen.index]?.classList.add('selected');
+      }
+    }
+    // Закрываем модальное окно через небольшую задержку и отправляем выбор
     setTimeout(() => {
       modal.classList.add('hidden');
       console.log('Modal closed');
-      // Показываем выбранный цвет игроку (офлайн) и/или отправляем выбор на сервер (онлайн)
       if (isOnline()) {
         const chosen = availableColors[colorIndex];
         if (chosen) wsSend({ type: 'choose_target', index: chosen.index });
@@ -279,7 +307,14 @@
 
   function resetMarkers() {
     cells.forEach((el) => {
-      el.classList.remove('guess', 'target', 'best', 'selected');
+      // не трогаем .guess и .selected здесь, чтобы не стирать актуальные клики и подсветку дающего
+      el.classList.remove('target', 'best');
+    });
+  }
+
+  function clearSelectedMarkers() {
+    cells.forEach((el) => {
+      el.classList.remove('selected');
     });
   }
 
@@ -329,7 +364,8 @@
       cueArea2El.classList.add('hidden');
       currentCueEl.classList.add('hidden');
       nextRoundBtn.disabled = true;
-      addPlayerSectionEl.style.display = online ? 'none' : 'flex';
+      // онлайн-режим только: локальное добавление игроков скрыто
+      addPlayerSectionEl.style.display = 'none';
       startGameBtn.disabled = online ? false : false;
     } else if (phase === 'cue1') {
       const giverIdx = online ? players.findIndex(p => p.id === s?.cue_giver) : state.cueGiverIndex;
@@ -392,11 +428,7 @@
       cueArea2El.classList.add('hidden');
       currentCueEl.classList.remove('hidden');
       nextRoundBtn.disabled = false;
-      forceEndRoundBtn.style.display = 'none'; // Скрываем кнопку принудительного завершения
       console.log('Reveal phase: nextRoundBtn enabled');
-    } else {
-      // Для всех других фаз показываем кнопку принудительного завершения
-      forceEndRoundBtn.style.display = 'block';
     }
     rerenderPlayers();
   }
@@ -597,46 +629,7 @@
     }
   });
   
-  // Добавляем обработчик для кнопки принудительного завершения раунда
-  forceEndRoundBtn.addEventListener('click', () => {
-    console.log('Force end round button clicked');
-    forceEndRound();
-  });
-  
-  // Добавляем обработчик для кнопки отладки состояния
-  debugStateBtn.addEventListener('click', () => {
-    console.log('=== DEBUG STATE ===');
-    console.log('Offline mode:', offline);
-    console.log('Players:', players);
-    console.log('State:', state);
-    console.log('Current player ID:', currentPlayerId);
-    console.log('Selected color index:', selectedColorIndex);
-    console.log('Available colors:', availableColors);
-    console.log('Next round button disabled:', nextRoundBtn.disabled);
-    console.log('Modal visible:', !document.getElementById('colorSelectionModal').classList.contains('hidden'));
-    
-    const info = `
-Состояние игры:
-- Режим: ${offline ? 'Офлайн' : 'Онлайн'}
-- Игроков: ${players.length}
-- Фаза: ${state.phase}
-- Раунд: ${state.round}
-- Дающий подсказки: ${players[state.cueGiverIndex]?.name || 'Не определен'}
-- Текущий игрок: ${players.find(p => p.id === currentPlayerId)?.name || 'Не определен'}
-- Кнопка "Следующий раунд": ${nextRoundBtn.disabled ? 'Заблокирована' : 'Активна'}
-- Модальное окно: ${document.getElementById('colorSelectionModal').classList.contains('hidden') ? 'Скрыто' : 'Видимо'}
-- Ячеек доски: ${cells.length}
-    `;
-    
-    alert(info);
-  });
-  
-  // Добавляем обработчик для кнопки перегенерации доски
-  regenerateBoardBtn.addEventListener('click', () => {
-    console.log('Regenerate board button clicked');
-    generateBoard();
-    alert('Доска перегенерирована!');
-  });
+  // удалены обработчики тестовых кнопок
 
 
   // Добавляем проверку состояния при загрузке страницы
@@ -646,23 +639,16 @@
     console.log('Players count:', players.length);
     console.log('Current phase:', state.phase);
     console.log('Next round button found:', !!nextRoundBtn);
-    console.log('Force end round button found:', !!forceEndRoundBtn);
     console.log('Modal found:', !!document.getElementById('colorSelectionModal'));
-    
-    // Генерируем доску после загрузки DOM
-    console.log('Generating board...');
-    generateBoard();
-    
     console.log('=== PAGE LOAD COMPLETE ===');
   });
 
   // ONLINE: WebSocket client (optional)
   function wsConnect() {
-    const url = (serverUrlInput.value || '').trim();
-    if (!url) return alert('Укажите WS URL');
+    const url = FIXED_WS_URL;
     ws = new WebSocket(url);
     ws.onopen = () => {
-      wsSend({ type: 'join', name: (selfNameInput.value || 'Игрок').trim(), room: (roomInput.value || null) });
+      wsSend({ type: 'join', name: (selfNameInput.value || 'Игрок').trim() });
       connectBtn.textContent = 'Отключиться';
       connectBtn.onclick = wsDisconnect;
       startGameBtn.disabled = false;
@@ -681,7 +667,7 @@
     ws.onclose = () => {
       connectBtn.textContent = 'Подключиться';
       connectBtn.onclick = wsConnect;
-      startGameBtn.disabled = offline;
+      startGameBtn.disabled = true;
       ws = null;
     };
   }
@@ -695,22 +681,91 @@
     state.cueGiverIndex = s.cue_giver ? players.findIndex(p => p.id === s.cue_giver) : 0;
     currentCueEl.textContent = [s.cue1, s.cue2].filter(Boolean).join(' / ');
     resetMarkers();
-    // Подсветка выбранного цвета у дающего (до reveal)
-    if ((s.phase === 'cue1' || s.phase === 'guess1' || s.phase === 'cue2' || s.phase === 'guess2') && s.target != null && selfId && s.cue_giver === selfId) {
-      const idx = s.target;
-      if (typeof idx === 'number') cells[idx]?.classList.add('selected');
+    clearSelectedMarkers();
+    // Подсветка выбранного цвета у дающего (все фазы раунда)
+    const isGiver = selfId && s.cue_giver && selfId === s.cue_giver;
+    const inRoundPhases = s.phase === 'cue1' || s.phase === 'guess1' || s.phase === 'cue2' || s.phase === 'guess2' || s.phase === 'reveal';
+    if (isGiver && inRoundPhases) {
+      if (typeof s.target === 'number') {
+        cells[s.target]?.classList.add('selected');
+      } else if (localSelectedIdx != null && (localSelectedRound == null || localSelectedRound === s.round)) {
+        // Сервер пока не прислал target, удерживаем локальную подсветку
+        cells[localSelectedIdx]?.classList.add('selected');
+      }
     }
-    if (s.phase === 'reveal' && s.target != null) {
+    // Отмечаем догадки игроков в течение всего раунда, если сервер присылает last_guesses
+    // Отображаем догадки по фазам, поддерживая разные форматы от сервера:
+    // guesses1/guesses2/last_guesses могут быть:
+    // - массивом пар [playerId, idx]
+    // - объектом { playerId: idx }
+    // - массивом индексов
+    const toIndices = (data) => {
+      if (!data) return [];
+      if (Array.isArray(data)) {
+        const out = [];
+        for (const item of data) {
+          if (Array.isArray(item)) out.push(item[1]);
+          else if (typeof item === 'number') out.push(item);
+        }
+        return out.filter((x)=> typeof x === 'number');
+      }
+      if (typeof data === 'object') {
+        return Object.values(data).filter((x)=> typeof x === 'number');
+      }
+      return [];
+    };
+    const toMap = (data) => {
+      const map = new Map();
+      if (!data) return map;
+      if (Array.isArray(data)) {
+        for (const item of data) {
+          if (Array.isArray(item) && item.length >= 2) {
+            map.set(String(item[0]), item[1]);
+          }
+        }
+      } else if (typeof data === 'object') {
+        for (const [k, v] of Object.entries(data)) {
+          if (typeof v === 'number') map.set(String(k), v);
+        }
+      }
+      return map;
+    };
+    // Всегда пересобираем guess-маркеры на основе серверных данных, чтобы видеть одинаковое у всех
+    cells.forEach((el)=> el.classList.remove('guess'));
+    let indices = [];
+    if (s.phase === 'guess1' || s.phase === 'cue2') {
+      // показываем первые догадки
+      const g1 = toMap(s.guesses1);
+      if (g1.size > 0) indices = Array.from(g1.values());
+      else indices = toIndices(s.guesses) || toIndices(s.last_guesses);
+    } else if (s.phase === 'guess2' || s.phase === 'reveal') {
+      // показываем вторые догадки, а для не сделавших второй — первые
+      const g1 = toMap(s.guesses1);
+      const g2 = toMap(s.guesses2);
+      if (g1.size > 0 || g2.size > 0) {
+        const set = new Set();
+        for (const [, idx] of g2) if (typeof idx === 'number') set.add(idx);
+        for (const [pid, idx] of g1) if (!g2.has(pid) && typeof idx === 'number') set.add(idx);
+        indices = Array.from(set.values());
+      } else {
+        indices = toIndices(s.last_guesses) || toIndices(s.guesses2) || [];
+      }
+    }
+    for (const idx of indices) if (typeof idx === 'number') cells[idx]?.classList.add('guess');
+    // В фазе reveal дополнительно подсветим цель
+    if (s.phase === 'reveal' && typeof s.target === 'number') {
       const targetIdx = s.target;
       cells[targetIdx]?.classList.add('target');
-      const guesses = s.last_guesses || [];
-      for (const [, idx] of guesses) cells[idx]?.classList.add('guess');
-      // best guess рассчитываем на сервере; клиент может подсветить его по желанию
     }
     // Логи по изменениям состояния
     if (prevServerRound !== s.round) {
       log(`— Раунд ${s.round} —`);
       modalShownRound = null; // сбрасываем флаг показа модалки на новый раунд
+      localSelectedIdx = null;
+      localSelectedRound = null;
+      clearSelectedMarkers();
+      // очищаем все догадки с прошлого раунда
+      cells.forEach((el)=> el.classList.remove('guess'));
     }
     if (!prevServerCue1 && s.cue1) {
       log(`Подсказка #1: ${s.cue1}`);
@@ -733,15 +788,7 @@
     updateUIState();
   }
 
-  // offline/online toggle
-  if (offlineModeInput) {
-    offlineModeInput.addEventListener('change', ()=>{
-      offline = offlineModeInput.checked;
-      document.getElementById('serverControls').style.display = offline ? 'none' : 'inline-flex';
-      startGameBtn.disabled = !offline && !(ws && ws.readyState === WebSocket.OPEN);
-      updateUIState();
-    });
-  }
+  // Подключение по фиксированному адресу
   if (connectBtn) connectBtn.addEventListener('click', wsConnect);
 
   function onCellClick(idx) {
@@ -752,7 +799,8 @@
         // блокируем клики у дающего подсказку
         if (selfId && s.cue_giver && selfId === s.cue_giver) return;
         wsSend({ type: 'guess', cell: idx });
-        cells[idx]?.classList.add('guess');
+        // Немедленно показать выбор этому клиенту (только если это первая волна)
+        if (s.phase === 'guess1') cells[idx]?.classList.add('guess');
       }
       return;
     }

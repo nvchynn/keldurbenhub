@@ -49,6 +49,8 @@ struct GameStateDto {
     players: Vec<PlayerDto>,
     guessed_once: HashSet<Uuid>,
     guessed_twice: HashSet<Uuid>,
+    guesses1: Vec<(Uuid, usize)>,
+    guesses2: Vec<(Uuid, usize)>,
     last_guesses: Vec<(Uuid, usize)>,
 }
 
@@ -341,6 +343,8 @@ fn broadcast_state(room_name: String, guard: &AppState) {
             players: room.players.iter().map(|p| PlayerDto{ id: p.id, name: p.name.clone(), score: p.score }).collect(),
             guessed_once: room.guessed_once.clone(),
             guessed_twice: room.guessed_twice.clone(),
+            guesses1: room.guess1_cells.iter().map(|(k,v)| (*k, *v)).collect(),
+            guesses2: room.guess2_cells.iter().map(|(k,v)| (*k, *v)).collect(),
             last_guesses: room.guess2_cells.iter().map(|(k,v)| (*k, *v)).collect(),
         };
         let msg = Message::Text(serde_json::to_string(&ServerMsg::State{ state: dto }).unwrap());
