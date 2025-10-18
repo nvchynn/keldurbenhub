@@ -1,3 +1,4 @@
+#![cfg(feature = "desktop")]
 use std::{collections::{HashMap, HashSet}, net::SocketAddr, sync::Arc};
 
 use axum::{extract::State, routing::get, Router};
