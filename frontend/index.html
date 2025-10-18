@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Хуи и куи (локально)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <h1>Хуи и куи</h1>
+      <div class="controls">
+        <label class="toggle"><input id="offlineMode" type="checkbox" checked /> Офлайн</label>
+        <span id="serverControls">
+          <input id="serverUrl" type="text" value="ws://localhost:8765/ws" aria-label="WS URL" />
+          <input id="roomInput" type="text" placeholder="Комната (опц.)" />
+          <input id="selfName" type="text" placeholder="Ваше имя" />
+          <button id="connectBtn" class="secondary">Подключиться</button>
+        </span>
+        <button id="startGameBtn" class="primary" disabled>Старт</button>
+      </div>
+    </header>
+
+    <main class="layout">
+      <section class="sidebar">
+        <div class="panel">
+          <h2>Игроки</h2>
+          <div id="playersList" class="players-list"></div>
+          <div id="addPlayerSection" class="add-player">
+            <input id="playerNameInput" type="text" placeholder="Имя игрока" />
+            <button id="addPlayerBtn">Добавить</button>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h2>Раунд</h2>
+          <div id="roundInfo" class="round-info"></div>
+          <button id="nextRoundBtn" class="primary" disabled>Следующий раунд</button>
+          <button id="forceEndRoundBtn" class="secondary" style="margin-top: 8px; font-size: 14px; padding: 8px 12px;">Завершить раунд принудительно</button>
+          <button id="debugStateBtn" class="secondary" style="margin-top: 8px; font-size: 14px; padding: 8px 12px;">Показать состояние игры</button>
+          <button id="regenerateBoardBtn" class="secondary" style="margin-top: 8px; font-size: 14px; padding: 8px 12px;">Перегенерировать доску</button>
+          <div id="cueArea1" class="cue-area hidden">
+            <input id="cueInput1" type="text" maxlength="20" placeholder="Подсказка 1 (1 слово)" />
+            <button id="lockCueBtn1" class="primary">Дать подсказку 1</button>
+          </div>
+          <div id="cueArea2" class="cue-area hidden">
+            <input id="cueInput2" type="text" maxlength="40" placeholder="Подсказка 2 (до 2 слов)" />
+            <button id="lockCueBtn2" class="primary">Дать подсказку 2</button>
+          </div>
+          <div id="currentCue" class="current-cue hidden"></div>
+        </div>
+
+        <div class="panel">
+          <h2>История</h2>
+          <div id="log" class="log"></div>
+        </div>
+      </section>
+
+      <section class="board-wrap">
+        <div class="board-container">
+          <!-- Верхние координаты (цифры) -->
+          <div class="coordinates-top">
+            <div class="coord-spacer"></div>
+            <div class="coord-numbers"></div>
+            <div class="coord-spacer"></div>
+          </div>
+          
+          <!-- Основная доска с боковыми координатами -->
+          <div class="board-row">
+            <!-- Левые координаты (буквы) -->
+            <div class="coordinates-left">
+              <div class="coord-letters"></div>
+            </div>
+            
+            <!-- Сама доска -->
+            <div id="board" class="board" aria-label="Палитра цветов" role="grid"></div>
+            
+            <!-- Правые координаты (буквы) -->
+            <div class="coordinates-right">
+              <div class="coord-letters"></div>
+            </div>
+          </div>
+          
+          <!-- Нижние координаты (цифры) -->
+          <div class="coordinates-bottom">
+            <div class="coord-spacer"></div>
+            <div class="coord-numbers"></div>
+            <div class="coord-spacer"></div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="app-footer">
+      <div>Локальная версия для игры за одним устройством</div>
+    </footer>
+
+    <!-- Модальное окно выбора цвета -->
+    <div id="colorSelectionModal" class="modal hidden">
+      <div class="modal-content">
+        <h3>Выберите цвет для подсказки</h3>
+        <p>Выберите один из четырех случайных цветов. По этому цвету вы будете давать подсказки в этом раунде.</p>
+        <div class="color-options">
+          <div class="color-option" data-color-index="0">
+            <div class="color-preview"></div>
+            <span class="color-name"></span>
+          </div>
+          <div class="color-option" data-color-index="1">
+            <div class="color-preview"></div>
+            <span class="color-name"></span>
+          </div>
+          <div class="color-option" data-color-index="2">
+            <div class="color-preview"></div>
+            <span class="color-name"></span>
+          </div>
+          <div class="color-option" data-color-index="3">
+            <div class="color-preview"></div>
+            <span class="color-name"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="script.js"></script>
+  </body>
+  </html>
+
+

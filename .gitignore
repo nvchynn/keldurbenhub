@@ -1,0 +1,15 @@
+# Rust/Tauri
+src-tauri/target/
+src-tauri/.cargo/
+src-tauri/.tauri/
+*.pdb
+
+# Node/web (на будущее)
+node_modules/
+dist/
+build/
+
+# IDE/OS
+.vscode/
+.DS_Store
+Thumbs.db
