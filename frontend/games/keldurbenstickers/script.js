@@ -1,3 +1,5 @@
+const STICKERS_WS_URL = 'ws://185.177.219.234:8765/ws';
+
 class KeldurbenStickersGame {
     constructor() {
         this.players = [];
@@ -7,10 +9,14 @@ class KeldurbenStickersGame {
         this.currentQuestion = null;
         this.votes = new Map(); // player -> vote
         this.guessedPlayers = new Set();
+        this.ws = null;
         
         this.initializeElements();
         this.attachEventListeners();
         this.initializeWithCurrentUser();
+
+        // Попробуем подключиться к общему WS, чтобы синхронизировать комнату ожидания
+        this.connectWS();
     }
 
     initializeElements() {
@@ -71,6 +77,35 @@ class KeldurbenStickersGame {
                 playersInfo.style.display = 'block';
             }
         }
+    }
+
+    connectWS() {
+        try {
+            if (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) return;
+            this.ws = new WebSocket(STICKERS_WS_URL);
+            this.ws.onopen = () => {
+                const cu = this.getCurrentUser();
+                const name = cu && cu.username ? cu.username : 'Игрок';
+                this.wsSend({ type: 'join', name, room: 'default' });
+            };
+            this.ws.onmessage = (ev) => {
+                try {
+                    const msg = JSON.parse(ev.data);
+                    if (msg.type === 'state' && msg.state && Array.isArray(msg.state.players)) {
+                        // Синхронизируем комнату ожидания из серверного списка игроков
+                        this.players = msg.state.players.map(p => p.name || 'Игрок');
+                        this.updatePlayersList();
+                        this.updateStartButton();
+                    }
+                } catch {}
+            };
+            this.ws.onclose = () => { this.ws = null; };
+            this.ws.onerror = () => {};
+        } catch {}
+    }
+
+    wsSend(obj) {
+        try { if (this.ws && this.ws.readyState === WebSocket.OPEN) this.ws.send(JSON.stringify(obj)); } catch {}
     }
 
     attachEventListeners() {
