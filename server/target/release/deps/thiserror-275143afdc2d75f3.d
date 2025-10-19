@@ -1,0 +1,14 @@
+C:\Users\nachy\Desktop\nachyhn213\server\target\release\deps\thiserror-275143afdc2d75f3.d: C:\Users\nachy\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.17\src\lib.rs C:\Users\nachy\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.17\src\aserror.rs C:\Users\nachy\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.17\src\display.rs C:\Users\nachy\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.17\src\var.rs C:\Users\nachy\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.17\src\private.rs C:\Users\nachy\Desktop\nachyhn213\server\target\release\build\thiserror-752e0de4c95dc38e\out/private.rs
+
+C:\Users\nachy\Desktop\nachyhn213\server\target\release\deps\libthiserror-275143afdc2d75f3.rlib: C:\Users\nachy\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.17\src\lib.rs C:\Users\nachy\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.17\src\aserror.rs C:\Users\nachy\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.17\src\display.rs C:\Users\nachy\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.17\src\var.rs C:\Users\nachy\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.17\src\private.rs C:\Users\nachy\Desktop\nachyhn213\server\target\release\build\thiserror-752e0de4c95dc38e\out/private.rs
+
+C:\Users\nachy\Desktop\nachyhn213\server\target\release\deps\libthiserror-275143afdc2d75f3.rmeta: C:\Users\nachy\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.17\src\lib.rs C:\Users\nachy\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.17\src\aserror.rs C:\Users\nachy\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.17\src\display.rs C:\Users\nachy\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.17\src\var.rs C:\Users\nachy\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.17\src\private.rs C:\Users\nachy\Desktop\nachyhn213\server\target\release\build\thiserror-752e0de4c95dc38e\out/private.rs
+
+C:\Users\nachy\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.17\src\lib.rs:
+C:\Users\nachy\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.17\src\aserror.rs:
+C:\Users\nachy\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.17\src\display.rs:
+C:\Users\nachy\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.17\src\var.rs:
+C:\Users\nachy\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.17\src\private.rs:
+C:\Users\nachy\Desktop\nachyhn213\server\target\release\build\thiserror-752e0de4c95dc38e\out/private.rs:
+
+# env-dep:OUT_DIR=C:\\Users\\nachy\\Desktop\\nachyhn213\\server\\target\\release\\build\\thiserror-752e0de4c95dc38e\\out
