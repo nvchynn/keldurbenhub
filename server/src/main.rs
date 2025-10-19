@@ -217,12 +217,12 @@ async fn main() -> anyhow::Result<()> {
         .route("/api/me", get(me))
         .route("/api/admin/reset", post(admin_reset))
         .route("/api/admin/kick", post(admin_kick))
-        .fallback_service(
-            axum::routing::get_service(
-                ServeDir::new(static_dir.clone())
-                    .fallback(ServeFile::new(format!("{}/index.html", static_dir)))
-            )
-        )
+        .fallback_service({
+            let file_service = ServeDir::new(static_dir.clone())
+                .append_index_html_on_directories(true)
+                .fallback(ServeFile::new(format!("{}/index.html", static_dir)));
+            axum::routing::get_service(file_service)
+        })
         .layer(cors)
         .layer(CompressionLayer::new())
         .layer(TraceLayer::new_for_http())
