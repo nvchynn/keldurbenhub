@@ -33,8 +33,14 @@ print_header() {
 
 # Check if running as root
 if [[ $EUID -eq 0 ]]; then
-   print_error "This script should not be run as root for security reasons"
-   exit 1
+   print_warning "Running as root is not recommended for security reasons"
+   print_warning "Consider creating a regular user: adduser keldurben && usermod -aG sudo keldurben"
+   read -p "Do you want to continue anyway? (y/N): " -n 1 -r
+   echo
+   if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+       print_error "Exiting for security reasons"
+       exit 1
+   fi
 fi
 
 # Function to show usage
