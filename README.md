@@ -18,6 +18,9 @@ source ~/.cargo/env
 
 # Устанавливаем зависимости
 sudo apt install -y build-essential pkg-config libssl-dev sqlite3 libsqlite3-dev nginx git
+
+# Устанавливаем системные библиотеки
+sudo apt install -y libglib2.0-dev libgtk-3-dev libwebkit2gtk-4.0-dev libayatana-appindicator3-dev librsvg2-dev
 ```
 
 ### 3. Клонирование проекта

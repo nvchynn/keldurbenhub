@@ -25,6 +25,9 @@ apt update && apt upgrade -y
 echo "🔧 Устанавливаем зависимости..."
 apt install -y build-essential pkg-config libssl-dev sqlite3 libsqlite3-dev nginx git
 
+echo "📚 Устанавливаем системные библиотеки..."
+apt install -y libglib2.0-dev libgtk-3-dev libwebkit2gtk-4.0-dev libayatana-appindicator3-dev librsvg2-dev
+
 echo "🦀 Устанавливаем Rust..."
 if ! command -v rustc &> /dev/null; then
     curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
