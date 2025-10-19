@@ -80,6 +80,7 @@
   let prevServerRound = null;
   let prevServerCue1 = null;
   let prevServerTarget = null;
+  let prevPlayersMap = new Map(); // id -> name, для логов присоединения/выхода
   // Локальная подсветка выбранного индекса до того, как сервер пришлёт target (только для дающего)
   let localSelectedIdx = null;
   let localSelectedRound = null;
@@ -699,6 +700,9 @@
   function wsDisconnect() { if (ws) ws.close(); }
   function wsSend(obj) { if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(obj)); }
 
+  // Экспортируем общий дисконнект для хаба
+  try { window.disconnectActiveGame = () => { try { wsDisconnect(); } catch {} }; } catch {}
+
   // Expose minimal helpers for hub waiting room integration
   window.addPlayerToGame = function(username) {
     try {
@@ -743,6 +747,18 @@
       modalBlockedUntilStart = false;
     }
     players = Array.isArray(s.players) ? s.players : [];
+    try {
+      // логи присоединения/выхода
+      const curMap = new Map();
+      players.forEach(p => curMap.set(String(p.id), p.name));
+      for (const [id, name] of prevPlayersMap) {
+        if (!curMap.has(id)) log(`${name} покинул игру.`);
+      }
+      for (const [id, name] of curMap) {
+        if (!prevPlayersMap.has(id)) log(`${name} присоединился к игре.`);
+      }
+      prevPlayersMap = curMap;
+    } catch {}
     // обновим комнату ожидания в хабе, если он есть
     try { if (typeof window.updateWaitingRoomPlayers === 'function') window.updateWaitingRoomPlayers(players); } catch {}
     state.round = s.round;

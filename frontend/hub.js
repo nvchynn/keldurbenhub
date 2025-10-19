@@ -462,6 +462,9 @@
     
     // Сбрасываем флаг активности игры
     isGameActive = false;
+
+    // Корректно отключаемся от активной игры (WS закрыть и т.п.)
+    try { if (typeof window.disconnectActiveGame === 'function') window.disconnectActiveGame(); } catch {}
     
     // Очищаем текущую игру
     if (gameScript) {
