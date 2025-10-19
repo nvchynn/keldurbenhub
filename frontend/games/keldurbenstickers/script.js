@@ -1,4 +1,5 @@
 const STICKERS_WS_URL = 'ws://185.177.219.234:8765/ws';
+const STICKERS_ROOM = 'stickers';
 
 class KeldurbenStickersGame {
     constructor() {
@@ -86,7 +87,7 @@ class KeldurbenStickersGame {
             this.ws.onopen = () => {
                 const cu = this.getCurrentUser();
                 const name = cu && cu.username ? cu.username : 'Игрок';
-                this.wsSend({ type: 'join', name, room: 'default' });
+                this.wsSend({ type: 'join', name, room: STICKERS_ROOM });
             };
             this.ws.onmessage = (ev) => {
                 try {

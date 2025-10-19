@@ -20,6 +20,7 @@
   const addPlayerBtn = document.getElementById('addPlayerBtn');
   // Элементы UI, включая онлайн-управление
   const FIXED_WS_URL = 'ws://185.177.219.234:8765/ws';
+  const ROOM_NAME = 'colors';
   // Desktop: try to auto-connect and integrate with hub's waiting room
   let hasPassedWaitingRoom = false;
   // roomInput убран из UI; комната не используется
@@ -684,7 +685,7 @@
         const cu = JSON.parse(localStorage.getItem('currentUser') || 'null');
         if (cu && cu.username) uname = cu.username;
       } catch {}
-      wsSend({ type: 'join', name: (selfNameInput?.value || uname).trim(), room: 'default' });
+      wsSend({ type: 'join', name: (selfNameInput?.value || uname).trim(), room: ROOM_NAME });
       if (connectBtn) { connectBtn.textContent = 'Отключиться'; connectBtn.onclick = wsDisconnect; }
       if (startGameBtn) startGameBtn.disabled = false;
       modalBlockedUntilStart = true;
