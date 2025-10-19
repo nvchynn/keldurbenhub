@@ -205,6 +205,7 @@
       </div>
       <div class="game-topbar">
         <button id="startGameBtn" class="primary">Старт</button>
+        <button id="backToHubBtn" class="secondary">Назад в хаб</button>
       </div>
       
       <!-- Комната ожидания -->
