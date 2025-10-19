@@ -19,7 +19,7 @@
   const playerNameInput = document.getElementById('playerNameInput');
   const addPlayerBtn = document.getElementById('addPlayerBtn');
   // Элементы UI, включая онлайн-управление
-  const FIXED_WS_URL = 'ws://185.177.219.234:8765/ws';
+  const FIXED_WS_URL = `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/ws`;
   // roomInput убран из UI; комната не используется
   const selfNameInput = document.getElementById('selfName');
   const connectBtn = document.getElementById('connectBtn');
