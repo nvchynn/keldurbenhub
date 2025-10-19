@@ -459,7 +459,7 @@
     try {
       const n = document.createElement('div');
       n.textContent = message;
-      n.style.cssText = 'position:fixed;right:16px;bottom:16px;background:rgba(0,0,0,.7);color:#fff;padding:10px 14px;border-radius:10px;z-index:20000;box-shadow:0 6px 20px rgba(0,0,0,.35)';
+      n.style.cssText = 'position:fixed;right:16px;top:16px;background:rgba(0,0,0,.78);color:#fff;padding:10px 14px;border-radius:10px;z-index:99999;box-shadow:0 6px 20px rgba(0,0,0,.35);pointer-events:none;font-weight:600';
       document.body.appendChild(n);
       setTimeout(()=>{ try{document.body.removeChild(n);}catch{} }, 2200);
     } catch {}

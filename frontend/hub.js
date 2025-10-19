@@ -18,6 +18,17 @@
   let currentGame = null;
   let gameScript = null;
   let isGameActive = false;
+  let waitingPrevNames = new Set();
+
+  function showToast(text) {
+    try {
+      const el = document.createElement('div');
+      el.textContent = text;
+      el.style.cssText = 'position:fixed;right:16px;top:16px;background:rgba(0,0,0,.78);color:#fff;padding:10px 14px;border-radius:10px;z-index:99999;box-shadow:0 6px 20px rgba(0,0,0,.35);pointer-events:none;font-weight:600';
+      document.body.appendChild(el);
+      setTimeout(()=>{ try{ document.body.removeChild(el); } catch{} }, 2200);
+    } catch {}
+  }
 
   // Инициализация хаба
   function initHub() {
@@ -400,6 +411,14 @@
     const waitingPlayersList = document.getElementById('waiting-players-list');
     if (!waitingPlayersList) return;
     
+    // diff for toast
+    try {
+      const cur = new Set((players || []).map(p => p && p.name ? p.name : 'Игрок'));
+      for (const name of waitingPrevNames) if (!cur.has(name)) showToast(`${name} покинул игру`);
+      for (const name of cur) if (!waitingPrevNames.has(name)) showToast(`${name} присоединился`);
+      waitingPrevNames = cur;
+    } catch {}
+
     waitingPlayersList.innerHTML = '';
     const currentUser = getCurrentUser();
     
