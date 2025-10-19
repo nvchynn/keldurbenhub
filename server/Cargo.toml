@@ -14,6 +14,7 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 tower = "0.4"
 tower-http = { version = "0.5", features = ["cors", "trace", "compression-br", "compression-gzip", "fs"] }
 tokio-stream = "0.1"
+futures-util = "0.3"
 
 # Auth
 argon2 = "0.5"

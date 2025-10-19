@@ -7,10 +7,11 @@ use axum::{
     routing::{get, post},
     Json, Router,
 };
-use futures::{SinkExt, StreamExt};
+use futures_util::{SinkExt, StreamExt};
 use serde::{Deserialize, Serialize};
 use tokio::net::TcpListener;
 use tokio_stream::wrappers::UnboundedReceiverStream;
+use tokio_stream::StreamExt as _;
 use tower_http::{cors::CorsLayer, services::{ServeDir, ServeFile}, compression::CompressionLayer, trace::TraceLayer};
 use tracing::{error, info};
 use uuid::Uuid;
@@ -218,9 +219,16 @@ async fn main() -> anyhow::Result<()> {
         .route("/api/admin/reset", post(admin_reset))
         .route("/api/admin/kick", post(admin_kick))
         .fallback_service(
-            axum::routing::get_service(ServeDir::new(static_dir.clone())
-                .fallback(ServeFile::new(format!("{}/index.html", static_dir))))
-                .handle_error(handle_static_error)
+            axum::routing::get_service(
+                ServeDir::new(static_dir.clone())
+                    .fallback(ServeFile::new(format!("{}/index.html", static_dir)))
+            )
+            .handle_error(|err: std::io::Error| async move {
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    format!("Static file error: {}", err),
+                )
+            })
         )
         .layer(cors)
         .layer(CompressionLayer::new())
@@ -233,12 +241,7 @@ async fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-async fn handle_static_error(err: std::io::Error) -> impl IntoResponse {
-    (
-        StatusCode::INTERNAL_SERVER_ERROR,
-        format!("Static file error: {}", err),
-    )
-}
+// static error handled inline in router
 
 // ===================== REST: Auth =====================
 #[derive(Deserialize)]
@@ -266,11 +269,12 @@ async fn register(State(app): State<AppState>, Json(payload): Json<AuthPayload>)
 }
 
 async fn login(State(app): State<AppState>, Json(payload): Json<AuthPayload>) -> impl IntoResponse {
-    let row = sqlx::query_as::<_, UserRow>("SELECT id, username, pwd_hash, avatar FROM users WHERE username = ?1")
+    let row_res = sqlx::query_as::<_, UserRow>("SELECT id, username, pwd_hash, avatar FROM users WHERE username = ?1")
         .bind(&payload.username)
         .fetch_optional(&app.db).await;
-    let Some(row) = match row { Ok(v) => v, Err(_) => None } else {
-        return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({"error":"invalid_credentials"}))).into_response();
+    let row = match row_res {
+        Ok(Some(row)) => row,
+        _ => return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({"error":"invalid_credentials"}))).into_response(),
     };
     if !verify_password(&payload.password, &row.pwd_hash) {
         return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({"error":"invalid_credentials"}))).into_response();
