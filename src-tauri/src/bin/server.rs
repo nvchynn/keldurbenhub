@@ -1,6 +1,12 @@
 use std::{collections::{HashMap, HashSet}, net::SocketAddr, sync::Arc};
 
-use axum::{extract::State, routing::get, Router};
+use axum::{
+    extract::{State, Query},
+    http::StatusCode,
+    response::Json,
+    routing::{get, post},
+    Router,
+};
 use axum::extract::ws::{Message, WebSocket, WebSocketUpgrade};
 use futures::{SinkExt, StreamExt};
 use parking_lot::Mutex;
@@ -9,6 +15,10 @@ use tokio::task::JoinHandle;
 use tracing::info;
 use uuid::Uuid;
 use tokio::net::TcpListener;
+use sqlx::SqlitePool;
+
+mod auth;
+use auth::{AuthService, LoginRequest, RegisterRequest, AuthResponse, UserDto};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
@@ -85,7 +95,9 @@ struct AppState {
     // map conn -> (room, player_id)
     conns: HashMap<Uuid, (String, Uuid)>,
     // senders for broadcast
-    txs: HashMap<Uuid, tokio::sync::mpsc::UnboundedSender<Message>>, 
+    txs: HashMap<Uuid, tokio::sync::mpsc::UnboundedSender<Message>>,
+    // auth service
+    auth_service: AuthService,
 }
 
 type Shared = Arc<Mutex<AppState>>;
@@ -121,7 +133,39 @@ fn rand_index(cols: u32, rows: u32) -> usize {
 async fn main() {
     tracing_subscriber::fmt().with_env_filter("info").init();
 
-    let shared: Shared = Arc::new(Mutex::new(AppState::default()));
+    // Инициализируем базу данных
+    let database_url = "sqlite:./users.db";
+    let pool = SqlitePool::connect(database_url)
+        .await
+        .expect("Failed to connect to database");
+
+    // Создаем таблицы
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS users (
+            id TEXT PRIMARY KEY,
+            username TEXT UNIQUE NOT NULL,
+            password_hash TEXT NOT NULL,
+            avatar TEXT,
+            created_at TEXT NOT NULL
+        )
+        "#,
+    )
+    .execute(&pool)
+    .await
+    .expect("Failed to create users table");
+
+    // Создаем AuthService
+    let jwt_secret = std::env::var("JWT_SECRET").unwrap_or_else(|_| "your-secret-key".to_string());
+    let auth_service = AuthService::new(pool, jwt_secret);
+
+    let shared: Shared = Arc::new(Mutex::new(AppState {
+        rooms: HashMap::new(),
+        conns: HashMap::new(),
+        txs: HashMap::new(),
+        auth_service,
+    }));
+    
     {
         let mut guard = shared.lock();
         guard.rooms.insert("default".into(), default_room());
@@ -132,10 +176,13 @@ async fn main() {
         .route("/ws", get(move |ws: WebSocketUpgrade, State(state): State<Shared>| async move {
             ws.on_upgrade(|socket| handle_socket(socket, state))
         }))
+        .route("/api/auth/register", post(register))
+        .route("/api/auth/login", post(login))
+        .route("/api/auth/me", get(get_current_user))
         .with_state(ws_state);
 
     let addr: SocketAddr = "0.0.0.0:8765".parse().unwrap();
-    info!("websocket server listening on {}", addr);
+    info!("Server listening on {}", addr);
     let listener = TcpListener::bind(&addr).await.unwrap();
     axum::serve(listener, app.into_make_service()).await.unwrap();
 }
@@ -365,6 +412,67 @@ fn rand_unique_indices(cols: u32, rows: u32, count: usize) -> Vec<usize> {
         set.insert(rand_index(cols, rows));
     }
     set.into_iter().collect()
+}
+
+// API handlers
+async fn register(
+    State(state): State<Shared>,
+    Json(payload): Json<RegisterRequest>,
+) -> Result<Json<AuthResponse>, (StatusCode, Json<serde_json::Value>)> {
+    let auth_service = {
+        let guard = state.lock();
+        guard.auth_service.clone()
+    };
+
+    match auth_service.register(payload).await {
+        Ok(response) => Ok(Json(response)),
+        Err(e) => Err((
+            StatusCode::BAD_REQUEST,
+            Json(serde_json::json!({ "error": e })),
+        )),
+    }
+}
+
+async fn login(
+    State(state): State<Shared>,
+    Json(payload): Json<LoginRequest>,
+) -> Result<Json<AuthResponse>, (StatusCode, Json<serde_json::Value>)> {
+    let auth_service = {
+        let guard = state.lock();
+        guard.auth_service.clone()
+    };
+
+    match auth_service.login(payload).await {
+        Ok(response) => Ok(Json(response)),
+        Err(e) => Err((
+            StatusCode::UNAUTHORIZED,
+            Json(serde_json::json!({ "error": e })),
+        )),
+    }
+}
+
+async fn get_current_user(
+    State(state): State<Shared>,
+    Query(params): Query<HashMap<String, String>>,
+) -> Result<Json<UserDto>, (StatusCode, Json<serde_json::Value>)> {
+    let token = params.get("token")
+        .ok_or_else(|| (
+            StatusCode::UNAUTHORIZED,
+            Json(serde_json::json!({ "error": "Token required" })),
+        ))?;
+
+    let auth_service = {
+        let guard = state.lock();
+        guard.auth_service.clone()
+    };
+
+    match auth_service.verify_token(token).await {
+        Ok(user) => Ok(Json(user)),
+        Err(e) => Err((
+            StatusCode::UNAUTHORIZED,
+            Json(serde_json::json!({ "error": e })),
+        )),
+    }
 }
 
 

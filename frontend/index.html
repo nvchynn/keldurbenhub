@@ -3,143 +3,191 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Хуи и куи</title>
+    <title>KELDURBENHUB</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Caveat:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
-    <header class="app-header">
-      <div class="brand">
-        <picture>
-          <source srcset="icon.png" type="image/png" />
-          <img src="icon.ico" alt="Логотип" class="app-logo" />
-        </picture>
-        <svg class="app-logo-fallback" viewBox="0 0 24 24" aria-hidden="true">
-          <path fill="#fff" d="M12 2C7.03 2 3 6.03 3 11c0 2.93 1.58 5.49 3.94 6.93.36.22.6.59.62 1.01l.06 1.59c.05 1.19 1.34 1.92 2.4 1.33l1.4-.78c.32-.18.7-.23 1.06-.13.5.14 1.02.22 1.56.22 4.97 0 9-4.03 9-9S16.97 2 12 2Zm-5 9a1 1 0 1 1 0-2 1 1 0 0 1 0 2Zm3-3a1 1 0 1 1 0-2 1 1 0 0 1 0 2Zm4 0a1 1 0 1 1 0-2 1 1 0 0 1 0 2Zm3 3a1 1 0 1 1 0-2 1 1 0 0 1 0 2Zm-6.5 2.5c1.38 0 2.5 1.12 2.5 2.5 0 .83-.4 1.57-1.03 2.03-.28.2-.62.31-.97.31-.35 0-.69-.11-.97-.31A2.49 2.49 0 0 1 9.5 14.5Z"/>
-        </svg>
-        <span class="brand-name">KELDURBENCOLOR</span>
+    <!-- Profile Button -->
+    <div class="profile-container">
+      <button id="accountBtn" class="profile-btn">
+        <div class="profile-avatar">
+          <div class="avatar-placeholder">?</div>
+        </div>
+        <span class="profile-text">Войти</span>
+        <div class="profile-arrow">▼</div>
+      </button>
+      
+      <!-- Profile Dropdown -->
+      <div id="profileDropdown" class="profile-dropdown hidden">
+        <div class="dropdown-header">
+          <div class="dropdown-avatar">
+            <div class="avatar-placeholder">?</div>
+          </div>
+          <div class="dropdown-info">
+            <div class="dropdown-username">Гость</div>
+            <div class="dropdown-status">Не авторизован</div>
+          </div>
+        </div>
+        <div class="dropdown-divider"></div>
+        <div class="dropdown-menu">
+          <button class="dropdown-item" data-action="back-to-hub" id="back-to-hub-dropdown">
+            <div class="dropdown-icon">🏠</div>
+            <span>Назад в хаб</span>
+          </button>
+          <div class="dropdown-divider"></div>
+          <button class="dropdown-item" data-action="profile">
+            <div class="dropdown-icon">👤</div>
+            <span>Профиль</span>
+          </button>
+          <button class="dropdown-item" data-action="settings">
+            <div class="dropdown-icon">⚙️</div>
+            <span>Настройки</span>
+          </button>
+          <button class="dropdown-item" data-action="friends">
+            <div class="dropdown-icon">👥</div>
+            <span>Друзья</span>
+          </button>
+          <div class="dropdown-divider"></div>
+          <button class="dropdown-item logout-item" data-action="logout">
+            <div class="dropdown-icon">🚪</div>
+            <span>Выйти</span>
+          </button>
+        </div>
       </div>
-      <div class="controls">
-        <span id="serverControls">
-          <input id="selfName" type="text" placeholder="Ваше имя" />
-          <button id="connectBtn" class="secondary">Подключиться</button>
-        </span>
-        <button id="startGameBtn" class="primary" disabled>Старт</button>
-      </div>
-    </header>
+    </div>
 
-    <main class="layout">
-      <section class="sidebar">
-        <div class="panel">
-          <h2>Текущий раунд</h2>
-          <div id="roundInfo" class="round-info"></div>
-          <button id="nextRoundBtn" class="primary" disabled>Следующий раунд</button>
-        </div>
-        <div class="panel">
-          <h2>Игроки</h2>
-          <div id="playersList" class="players-list"></div>
-          <div id="addPlayerSection" class="add-player">
-            <input id="playerNameInput" type="text" placeholder="Имя игрока" />
-            <button id="addPlayerBtn">Добавить</button>
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Sidebar -->
+      <aside class="sidebar">
+        <div class="sidebar-header">
+          <div class="sidebar-brand">
+            <img src="icon.ico" alt="KELDURBENHUB" class="sidebar-logo" />
+            <span class="sidebar-title">KELDURBENHUB</span>
           </div>
+          <p class="sidebar-subtitle">Выберите игру для запуска</p>
         </div>
-
-        <div class="panel">
-          <h2>Подсказки</h2>
-          
-          <div id="cueArea1" class="cue-area hidden">
-            <input id="cueInput1" type="text" maxlength="20" placeholder="Подсказка 1 (1 слово)" />
-            <button id="lockCueBtn1" class="primary">Дать подсказку</button>
-          </div>
-          <div id="cueArea2" class="cue-area hidden">
-            <input id="cueInput2" type="text" maxlength="40" placeholder="Подсказка 2 (до 2 слов)" />
-            <button id="lockCueBtn2" class="primary">Дать подсказку</button>
-          </div>
-          <div id="currentCue" class="current-cue hidden"></div>
-        </div>
-
-        <div class="panel">
-          <h2>История</h2>
-          <div id="log" class="log"></div>
-        </div>
-      </section>
-
-      <section class="board-wrap">
-        <div class="board-container">
-          <!-- Верхние координаты (цифры) -->
-          <div class="coordinates-top">
-            <div class="coord-spacer"></div>
-            <div class="coord-numbers"></div>
-            <div class="coord-spacer"></div>
-          </div>
-          
-          <!-- Основная доска с боковыми координатами -->
-          <div class="board-row">
-            <!-- Левые координаты (буквы) -->
-            <div class="coordinates-left">
-              <div class="coord-letters"></div>
+        <nav class="sidebar-nav">
+          <div class="nav-item active" data-game="hues-and-cues">
+            <div class="nav-item-icon">
+              <div class="game-icon-mini">
+                <div class="color-dot" style="background: #ffffff;"></div>
+                <div class="color-dot" style="background: #cccccc;"></div>
+                <div class="color-dot" style="background: #999999;"></div>
+                <div class="color-dot" style="background: #666666;"></div>
+              </div>
             </div>
-            
-            <!-- Сама доска -->
-            <div id="board" class="board" aria-label="Палитра цветов" role="grid"></div>
-            
-            <!-- Правые координаты (буквы) -->
-            <div class="coordinates-right">
-              <div class="coord-letters"></div>
+            <div class="nav-item-content">
+              <span class="nav-item-title">KELDURBENCOLORS</span>
+              <span class="nav-item-subtitle">Угадывайте цвета</span>
             </div>
           </div>
           
-          <!-- Нижние координаты (цифры) -->
-          <div class="coordinates-bottom">
-            <div class="coord-spacer"></div>
-            <div class="coord-numbers"></div>
-            <div class="coord-spacer"></div>
+          <div class="nav-item" data-game="keldurbenstickers">
+            <div class="nav-item-icon">
+              <div class="game-icon-mini">
+                <div class="sticker-icon">🎭</div>
+              </div>
+            </div>
+            <div class="nav-item-content">
+              <span class="nav-item-title">KELDURBENSTICKERS</span>
+              <span class="nav-item-subtitle">Угадай, кто ты!</span>
+            </div>
           </div>
+          
+                <div class="nav-item coming-soon" data-game="coming-soon">
+                  <div class="nav-item-icon">
+                    <div class="coming-soon-icon">🚧</div>
+                  </div>
+                  <div class="nav-item-content">
+                    <span class="nav-item-title">Скоро...</span>
+                    <span class="nav-item-subtitle">Новые игры в разработке</span>
+                  </div>
+                </div>
+        </nav>
+      </aside>
+
+      <!-- Game Content Area -->
+      <section class="content-area">
+        <div id="hubMenu" class="hub-content">
+          <!-- Welcome Section -->
+          <div class="welcome-section">
+            <div class="welcome-content">
+              <h2 class="welcome-title">Добро пожаловать в KELDURBENHUB</h2>
+              <p class="welcome-description">Выберите игру из боковой панели или нажмите кнопку "Играть" для запуска</p>
+            </div>
+          </div>
+
+          <!-- Game Details -->
+          <div class="game-details">
+            <div class="game-hero">
+              <div class="game-hero-icon">
+                <div class="color-palette-icon">
+                  <div class="color-swatch" style="background: #ffffff;"></div>
+                  <div class="color-swatch" style="background: #cccccc;"></div>
+                  <div class="color-swatch" style="background: #999999;"></div>
+                  <div class="color-swatch" style="background: #666666;"></div>
+                </div>
+              </div>
+              <div class="game-hero-content">
+                <h3 class="game-hero-title">KELDURBENCOLORS</h3>
+                <p class="game-hero-description">Угадайте цвета по подсказкам! Веселая игра на развитие воображения и ассоциативного мышления.</p>
+                <div class="game-hero-stats">
+                  <div class="stat-item">
+                    <span class="stat-icon">👥</span>
+                    <span class="stat-text">2-8 игроков</span>
+                  </div>
+                  <div class="stat-item">
+                    <span class="stat-icon">⏱️</span>
+                    <span class="stat-text">30-60 мин</span>
+                  </div>
+                  <div class="stat-item">
+                    <span class="stat-icon">🎯</span>
+                    <span class="stat-text">Логика</span>
+                  </div>
+                </div>
+                <button class="play-button-large">Играть</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Game Container -->
+        <div id="gameContainer" class="game-container hidden">
+          <!-- Здесь будет загружаться выбранная игра -->
         </div>
       </section>
     </main>
 
-    <footer class="app-footer"></footer>
-
-    <!-- Модальное окно выбора цвета -->
-    <div id="colorSelectionModal" class="modal hidden">
-      <div class="modal-content">
-        <h3>Выберите цвет для подсказки</h3>
-        <p>Выберите один из четырех случайных цветов. По этому цвету вы будете давать подсказки в этом раунде.</p>
-        <div class="color-options">
-          <div class="color-option" data-color-index="0">
-            <div class="color-preview"></div>
-            <span class="color-name"></span>
+    <!-- Auth Modal -->
+    <div id="authModal" class="modal hidden">
+      <div class="modal-content" style="max-width:480px">
+        <h3 id="authTitle">Аккаунт</h3>
+        <div class="auth-tabs" style="display:flex; gap:8px; margin-bottom:16px; justify-content:center">
+          <button id="tabLogin" class="secondary">Вход</button>
+          <button id="tabRegister" class="secondary">Регистрация</button>
+        </div>
+        <div class="auth-body">
+          <div class="auth-field" style="display:flex; flex-direction:column; gap:8px; margin-bottom:12px">
+            <label for="authUsername">Имя пользователя</label>
+            <input id="authUsername" type="text" placeholder="Ваш ник" />
           </div>
-          <div class="color-option" data-color-index="1">
-            <div class="color-preview"></div>
-            <span class="color-name"></span>
+          <div class="auth-field" style="display:flex; flex-direction:column; gap:8px; margin-bottom:12px">
+            <label for="authPassword">Пароль</label>
+            <input id="authPassword" type="password" placeholder="Пароль" />
           </div>
-          <div class="color-option" data-color-index="2">
-            <div class="color-preview"></div>
-            <span class="color-name"></span>
+          <div class="auth-actions" style="display:flex; gap:10px; justify-content:center; margin-top:8px">
+            <button id="authSubmit" class="primary">Войти</button>
+            <button id="authCancel" class="secondary">Отмена</button>
           </div>
-          <div class="color-option" data-color-index="3">
-            <div class="color-preview"></div>
-            <span class="color-name"></span>
-          </div>
+          <div id="authError" style="margin-top:10px; color:#ff7a7a; min-height:20px"></div>
         </div>
       </div>
     </div>
 
-    <!-- Модалка победителя -->
-    <div id="winnerModal" class="modal hidden">
-      <div class="modal-content">
-        <h3 id="winnerTitle">Победитель</h3>
-        <p id="winnerText">Игрок набрал 15 очков и победил!</p>
-        <button id="newGameBtn" class="primary" style="margin-top:12px">Начать новую игру</button>
-      </div>
-    </div>
-
-    <script src="script.js"></script>
+    <script src="hub.js"></script>
   </body>
-  </html>
-
-
+</html>

@@ -300,10 +300,14 @@ async fn handle_client_msg(conn_id: Uuid, cmd: ClientMsg, state: &Shared) {
                     if all_done {
                         room.phase = match room.phase { Phase::Guess1 => Phase::Cue2, Phase::Guess2 => Phase::Reveal, x => x };
                         if matches!(room.phase, Phase::Reveal) {
-                            // scoring based on second guesses
+                            // Scoring: prefer second guess; if absent, fallback to first guess
                             let target = room.target.unwrap_or_else(|| rand_index(room.cols, room.rows));
+                            let cue_giver_id = room.players.get(room.cue_giver_idx).map(|p| p.id);
                             for pl in room.players.iter_mut() {
-                                if let Some(&gcell) = room.guess2_cells.get(&pl.id) {
+                                if Some(pl.id) == cue_giver_id { continue; }
+                                let gcell_opt = room.guess2_cells.get(&pl.id).copied()
+                                    .or_else(|| room.guess1_cells.get(&pl.id).copied());
+                                if let Some(gcell) = gcell_opt {
                                     let d = manhattan(gcell, target, room.cols as usize);
                                     let pts = score_by_distance(d);
                                     pl.score += pts;

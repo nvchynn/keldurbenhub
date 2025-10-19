@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>KELDURBENCOLORS</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Caveat:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="game-brand">
+      <picture>
+        <source srcset="../../icon.png" type="image/png" />
+        <img src="../../icon.ico" alt="Логотип" class="game-logo" />
+      </picture>
+      <span class="game-title">KELDURBENCOLORS</span>
+    </div>
+    <div class="game-topbar">
+      <button id="startGameBtn" class="primary">Старт</button>
+    </div>
+    
+    <!-- Комната ожидания -->
+    <div id="waiting-room" class="waiting-room active">
+      <div class="waiting-content">
+        <h2>Комната ожидания</h2>
+        <div class="players-section">
+          <h3>Участники</h3>
+          <div id="waiting-players-list" class="waiting-players-list">
+            <!-- Игроки будут добавлены динамически -->
+          </div>
+          <p class="waiting-info">Игра для одного игрока. Вы автоматически добавлены в игру как текущий пользователь</p>
+        </div>
+        <div class="waiting-controls">
+          <button id="waiting-start-btn" class="primary-btn" disabled>Начать игру</button>
+        </div>
+      </div>
+    </div>
+    
+    <main class="layout hidden">
+      <section class="sidebar">
+        
+        <div class="panel">
+          <h2>Текущий раунд</h2>
+          <div id="roundInfo" class="round-info"></div>
+          <button id="nextRoundBtn" class="primary" disabled>Следующий раунд</button>
+        </div>
+
+        <div class="panel">
+          <h2>Подсказки</h2>
+          
+          <div id="cueArea1" class="cue-area hidden">
+            <input id="cueInput1" type="text" maxlength="20" placeholder="Подсказка 1 (1 слово)" />
+            <button id="lockCueBtn1" class="primary">Дать подсказку</button>
+          </div>
+          <div id="cueArea2" class="cue-area hidden">
+            <input id="cueInput2" type="text" maxlength="40" placeholder="Подсказка 2 (до 2 слов)" />
+            <button id="lockCueBtn2" class="primary">Дать подсказку</button>
+          </div>
+          <div id="currentCue" class="current-cue hidden"></div>
+        </div>
+
+        <div class="panel">
+          <h2>Игроки</h2>
+          <div id="playersList" class="players-list"></div>
+          <div id="addPlayerSection" class="add-player">
+            <input id="playerNameInput" type="text" placeholder="Имя игрока" />
+            <button id="addPlayerBtn">Добавить</button>
+          </div>
+        </div>
+
+      </section>
+
+      <section class="board-wrap">
+        <div class="board-container">
+          <!-- Верхние координаты (цифры) -->
+          <div class="coordinates-top">
+            <div class="coord-spacer"></div>
+            <div class="coord-numbers"></div>
+            <div class="coord-spacer"></div>
+          </div>
+          
+          <!-- Основная доска с боковыми координатами -->
+          <div class="board-row">
+            <!-- Левые координаты (буквы) -->
+            <div class="coordinates-left">
+              <div class="coord-letters"></div>
+            </div>
+            
+            <!-- Сама доска -->
+            <div id="board" class="board" aria-label="Палитра цветов" role="grid"></div>
+            
+            <!-- Правые координаты (буквы) -->
+            <div class="coordinates-right">
+              <div class="coord-letters"></div>
+            </div>
+          </div>
+          
+          <!-- Нижние координаты (цифры) -->
+          <div class="coordinates-bottom">
+            <div class="coord-spacer"></div>
+            <div class="coord-numbers"></div>
+            <div class="coord-spacer"></div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Модальное окно выбора цвета -->
+    <div id="colorSelectionModal" class="modal hidden">
+      <div class="modal-content">
+        <h3>Выберите цвет для подсказки</h3>
+        <p>Выберите один из четырех случайных цветов. По этому цвету вы будете давать подсказки в этом раунде.</p>
+        <div class="color-options">
+          <div class="color-option" data-color-index="0">
+            <div class="color-preview"></div>
+            <span class="color-name"></span>
+          </div>
+          <div class="color-option" data-color-index="1">
+            <div class="color-preview"></div>
+            <span class="color-name"></span>
+          </div>
+          <div class="color-option" data-color-index="2">
+            <div class="color-preview"></div>
+            <span class="color-name"></span>
+          </div>
+          <div class="color-option" data-color-index="3">
+            <div class="color-preview"></div>
+            <span class="color-name"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Модалка победителя -->
+    <div id="winnerModal" class="modal hidden">
+      <div class="modal-content">
+        <h3 id="winnerTitle">Победитель</h3>
+        <p id="winnerText">Игрок набрал 15 очков и победил!</p>
+          <button id="newGameBtn" class="primary" style="margin-top:12px">Начать новую игру</button>
+      </div>
+    </div>
+
+    <script src="script.js"></script>
+  </body>
+  </html>

@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KELDURBENSTICKERS</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎭 KELDURBENSTICKERS</h1>
+            <p class="subtitle">Угадай, кто ты!</p>
+        </header>
+
+        <!-- Экран настроек игры -->
+        <div id="setup-screen" class="screen active">
+            <div class="setup-content">
+                <h2>Комната ожидания</h2>
+                <div class="players-section">
+                    <h3>Участники</h3>
+                    <div id="players-list" class="players-list">
+                        <!-- Игроки будут добавлены динамически -->
+                    </div>
+                    <p class="players-info">Игра для одного игрока. Вы автоматически добавлены в игру как текущий пользователь</p>
+                </div>
+                <div class="game-controls">
+                    <button id="start-game-btn" class="primary-btn" disabled>Начать игру</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Экран загадывания -->
+        <div id="guessing-screen" class="screen">
+            <div class="guessing-content">
+                <h2>Загадывание персонажей</h2>
+                <div class="current-player">
+                    <h3>Сейчас загадывает: <span id="current-guesser"></span></h3>
+                    <p>Загадайте персонажа для: <span id="target-player"></span></p>
+                </div>
+                <div class="character-input">
+                    <input type="text" id="character-name" placeholder="Введите персонажа (Шрек, Буратино, Микроволновка...)" maxlength="50">
+                    <button id="submit-character-btn">Загадать</button>
+                </div>
+                <div class="progress">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progress-fill"></div>
+                    </div>
+                    <p id="progress-text">0 из 0 загадано</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Экран игры -->
+        <div id="game-screen" class="screen">
+            <div class="game-content">
+
+                <div class="player-cards">
+                    <div id="player-cards-container">
+                        <!-- Карточки игроков будут добавлены динамически -->
+                    </div>
+                </div>
+
+
+            </div>
+        </div>
+
+        <!-- Экран результатов -->
+        <div id="results-screen" class="screen">
+            <div class="results-content">
+                <h2>🎉 Игра завершена!</h2>
+                <div class="results-list" id="results-list">
+                    <!-- Результаты будут добавлены динамически -->
+                </div>
+                <div class="game-controls">
+                    <button id="play-again-btn" class="primary-btn">Играть снова</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
