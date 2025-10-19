@@ -384,7 +384,11 @@ async fn handle_client_msg(conn_id: Uuid, cmd: ClientMsg, app: &AppState) {
             let player_id = Uuid::new_v4();
             
             let mut hub = app.hub.lock().await;
-            let room_entry = hub.rooms.entry(room_name.clone()).or_insert_with(|| default_room());
+            let room_entry = hub.rooms.entry(room_name.clone()).or_insert_with(|| {
+                let mut r = default_room();
+                r.name = room_name.clone(); // ИСПРАВЛЕНИЕ: устанавливаем правильное имя комнаты
+                r
+            });
             room_entry.players.push(Player { id: player_id, name: name.clone(), score: 0 });
             let total_players = room_entry.players.len();
             hub.conns.insert(conn_id, (room_name.clone(), player_id));
