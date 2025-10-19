@@ -379,7 +379,22 @@ async fn handle_socket(socket: WebSocket, app: AppState) {
 async fn handle_client_msg(conn_id: Uuid, cmd: ClientMsg, app: &AppState) {
     match cmd {
         ClientMsg::Join { name, room } => {
-            let room_name = room.unwrap_or_else(|| "default".into());
+            // Heuristic: if no room provided or 'default', attach to the most populated existing room (if any),
+            // otherwise use 'default'. This helps legacy clients to land with active players.
+            let requested = room.unwrap_or_else(|| "default".into());
+            let room_name = {
+                let hub = app.hub.lock().await;
+                if requested == "default" {
+                    let mut best: Option<(String, usize)> = None;
+                    for (rname, r) in hub.rooms.iter() {
+                        let count = r.players.len();
+                        if count > 0 {
+                            match best { Some((_, c)) if c >= count => {}, _ => { best = Some((rname.clone(), count)); } }
+                        }
+                    }
+                    if let Some((r, _)) = best { r } else { requested }
+                } else { requested }
+            };
             let mut hub = app.hub.lock().await;
             let room_entry = hub.rooms.entry(room_name.clone()).or_insert_with(|| default_room());
             let player_id = Uuid::new_v4();
