@@ -13,7 +13,8 @@ use tokio::net::TcpListener;
 use tokio_stream::wrappers::UnboundedReceiverStream;
 use tokio_stream::StreamExt as _;
 use tower_http::{cors::CorsLayer, services::{ServeDir, ServeFile}, compression::CompressionLayer, trace::TraceLayer};
-use tracing::{error, info};
+use tower::ServiceExt as _;
+use tracing::info;
 use uuid::Uuid;
 
 use sqlx::{SqlitePool, sqlite::SqlitePoolOptions};
@@ -331,7 +332,7 @@ async fn handle_socket(socket: WebSocket, app: AppState) {
 
     let forward = tokio::spawn(async move {
         let mut msg_rx = UnboundedReceiverStream::new(msg_rx);
-        while let Some(msg) = msg_rx.next().await {
+        while let Some(msg) = tokio_stream::StreamExt::next(&mut msg_rx).await {
             if tx.send(msg).await.is_err() { break; }
         }
     });
@@ -342,7 +343,7 @@ async fn handle_socket(socket: WebSocket, app: AppState) {
         hub.txs.insert(conn_id, msg_tx.clone());
     }
 
-    while let Some(Ok(msg)) = rx.next().await {
+    while let Some(Ok(msg)) = futures_util::StreamExt::next(&mut rx).await {
         if let Message::Text(text) = msg {
             match serde_json::from_str::<ClientMsg>(&text) {
                 Ok(cmd) => handle_client_msg(conn_id, cmd, &app).await,
@@ -548,7 +549,7 @@ fn hash_password(password: &str) -> Result<String, argon2::password_hash::Error>
 
 fn verify_password(password: &str, pwd_hash: &str) -> bool {
     use argon2::{Argon2, PasswordVerifier};
-    use argon2::password_hash::{PasswordHash, PasswordVerifier as _};
+    use argon2::password_hash::PasswordHash;
     match PasswordHash::new(pwd_hash) {
         Ok(parsed) => Argon2::default().verify_password(password.as_bytes(), &parsed).is_ok(),
         Err(_) => false,
