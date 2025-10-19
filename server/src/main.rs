@@ -215,6 +215,7 @@ async fn main() -> anyhow::Result<()> {
         .route("/api/auth/register", post(register))
         .route("/api/auth/login", post(login))
         .route("/api/me", get(me))
+        .route("/api/debug/state", get(debug_state))
         .route("/api/admin/reset", post(admin_reset))
         .route("/api/admin/kick", post(admin_kick))
         .fallback_service({
@@ -283,6 +284,20 @@ async fn me(State(app): State<AppState>, auth: AuthBearer) -> impl IntoResponse 
         Ok(user) => (StatusCode::OK, Json(user)).into_response(),
         Err(_) => (StatusCode::UNAUTHORIZED, Json(serde_json::json!({"error":"unauthorized"}))).into_response(),
     }
+}
+
+async fn debug_state(State(app): State<AppState>) -> impl IntoResponse {
+    let hub = app.hub.lock().await;
+    let mut rooms = serde_json::Map::new();
+    for (name, room) in hub.rooms.iter() {
+        rooms.insert(name.clone(), serde_json::json!({
+            "round": room.round,
+            "phase": match room.phase { Phase::Lobby=>"lobby", Phase::Cue1=>"cue1", Phase::Guess1=>"guess1", Phase::Cue2=>"cue2", Phase::Guess2=>"guess2", Phase::Reveal=>"reveal" },
+            "players": room.players.iter().map(|p| { serde_json::json!({"id": p.id, "name": p.name, "score": p.score}) }).collect::<Vec<_>>()
+        }));
+    }
+    let conns = hub.conns.len();
+    (StatusCode::OK, Json(serde_json::json!({"rooms": rooms, "conns": conns}))).into_response()
 }
 
 // ===================== REST: Admin =====================
