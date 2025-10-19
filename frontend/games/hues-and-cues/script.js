@@ -19,7 +19,9 @@
   const playerNameInput = document.getElementById('playerNameInput');
   const addPlayerBtn = document.getElementById('addPlayerBtn');
   // Элементы UI, включая онлайн-управление
-  const FIXED_WS_URL = `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/ws`;
+  const FIXED_WS_URL = 'ws://185.177.219.234:8765/ws';
+  // Desktop: try to auto-connect and integrate with hub's waiting room
+  let hasPassedWaitingRoom = false;
   // roomInput убран из UI; комната не используется
   const selfNameInput = document.getElementById('selfName');
   const connectBtn = document.getElementById('connectBtn');
@@ -662,10 +664,16 @@
 
   // ONLINE: WebSocket client (optional)
   function wsConnect() {
+    if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) return;
     const url = FIXED_WS_URL;
     ws = new WebSocket(url);
     ws.onopen = () => {
-      wsSend({ type: 'join', name: (selfNameInput.value || 'Игрок').trim() });
+      let uname = 'Игрок';
+      try {
+        const cu = JSON.parse(localStorage.getItem('currentUser') || 'null');
+        if (cu && cu.username) uname = cu.username;
+      } catch {}
+      wsSend({ type: 'join', name: (selfNameInput?.value || uname).trim() });
       connectBtn.textContent = 'Отключиться';
       connectBtn.onclick = wsDisconnect;
       startGameBtn.disabled = false;
@@ -692,6 +700,36 @@
   }
   function wsDisconnect() { if (ws) ws.close(); }
   function wsSend(obj) { if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(obj)); }
+
+  // Expose minimal helpers for hub waiting room integration
+  window.addPlayerToGame = function(username) {
+    try {
+      wsConnect();
+    } catch {}
+    const stub = { id: `${Date.now()}-stub`, name: username || 'Игрок', score: 0 };
+    // reflect locally in sidebar list until server state arrives
+    try {
+      players = [stub];
+      rerenderPlayers();
+    } catch {}
+    return stub;
+  };
+
+  window.updateWaitingRoomPlayers = function(playerList) {
+    try {
+      const listEl = document.getElementById('waiting-players-list');
+      if (!listEl) return;
+      listEl.innerHTML = '';
+      (playerList || []).forEach(p => {
+        const item = document.createElement('div');
+        item.className = 'waiting-player-item';
+        item.textContent = p && p.name ? p.name : 'Игрок';
+        listEl.appendChild(item);
+      });
+    } catch {}
+  };
+
+  window.setHasPassedWaitingRoom = function(v) { hasPassedWaitingRoom = !!v; };
 
   function applyServerState(s) {
     window.__serverState = s;
@@ -1030,6 +1068,9 @@
 
   // Инициализация игры
   updateUIState();
+
+  // Auto-connect for desktop clients
+  try { wsConnect(); } catch {}
 })();
 
 

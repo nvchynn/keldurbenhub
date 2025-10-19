@@ -531,8 +531,8 @@
   function setAccounts(list) {
     localStorage.setItem('accounts', JSON.stringify(list));
   }
-  // API base URL — use current origin so it works on VDS and locally
-  const API_BASE_URL = `${window.location.origin}/api`;
+  // API base URL — fixed for desktop client
+  const API_BASE_URL = 'http://185.177.219.234:8765/api';
   
   function getCurrentUser() {
     const token = localStorage.getItem('authToken');
