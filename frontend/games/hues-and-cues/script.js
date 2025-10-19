@@ -729,6 +729,9 @@
 
   window.setHasPassedWaitingRoom = function(v) { hasPassedWaitingRoom = !!v; };
 
+  // Allow hub to force re-render of players list after switching screens
+  window.forcePlayersRerender = function() { try { rerenderPlayers(); } catch {} };
+
   function applyServerState(s) {
     window.__serverState = s;
     // Не показывать модалку при самом первом подключении (только если это лобби):

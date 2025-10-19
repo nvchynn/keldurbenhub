@@ -387,6 +387,8 @@
       if (mainLayout) {
         mainLayout.classList.remove('hidden');
       }
+      // Форс-рендер списка игроков после переключения экранов
+      try { if (typeof window.forcePlayersRerender === 'function') window.forcePlayersRerender(); } catch {}
       
       // НЕ запускаем игру автоматически - только переключаем экраны
       // Игра должна начаться только после нажатия кнопки "Старт"
