@@ -1,0 +1,19 @@
+[Unit]
+Description=KeldurbenHub Simple Server
+After=network.target
+
+[Service]
+Type=simple
+User=bebrik
+Group=bebrik
+WorkingDirectory=/home/bebrik/simple-server
+ExecStart=/home/bebrik/.cargo/bin/cargo run --release
+Restart=always
+RestartSec=5
+Environment=RUST_LOG=info
+Environment=JWT_SECRET=simple-server-secret-key-change-this
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
