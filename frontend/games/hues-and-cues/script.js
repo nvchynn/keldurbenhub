@@ -455,6 +455,16 @@
     logEl.prepend(el);
   }
 
+  function notify(message) {
+    try {
+      const n = document.createElement('div');
+      n.textContent = message;
+      n.style.cssText = 'position:fixed;right:16px;bottom:16px;background:rgba(0,0,0,.7);color:#fff;padding:10px 14px;border-radius:10px;z-index:20000;box-shadow:0 6px 20px rgba(0,0,0,.35)';
+      document.body.appendChild(n);
+      setTimeout(()=>{ try{document.body.removeChild(n);}catch{} }, 2200);
+    } catch {}
+  }
+
   function startGame() {
     if (isOnline()) {
       wsSend({ type: 'start_game' });
@@ -752,12 +762,15 @@
       const curMap = new Map();
       players.forEach(p => curMap.set(String(p.id), p.name));
       for (const [id, name] of prevPlayersMap) {
-        if (!curMap.has(id)) log(`${name} покинул игру.`);
+        if (!curMap.has(id)) { log(`${name} покинул игру.`); notify(`${name} покинул игру`); }
       }
       for (const [id, name] of curMap) {
-        if (!prevPlayersMap.has(id)) log(`${name} присоединился к игре.`);
+        if (!prevPlayersMap.has(id)) { log(`${name} присоединился к игре.`); notify(`${name} присоединился`); }
       }
       prevPlayersMap = curMap;
+      // немедленно перерисуем панель игроков
+      rerenderPlayers();
+      try { if (typeof window.updateWaitingRoomPlayers === 'function') window.updateWaitingRoomPlayers(players); } catch {}
     } catch {}
     // обновим комнату ожидания в хабе, если он есть
     try { if (typeof window.updateWaitingRoomPlayers === 'function') window.updateWaitingRoomPlayers(players); } catch {}
