@@ -13,7 +13,32 @@ fi
 
 echo "📚 Устанавливаем недостающие системные библиотеки..."
 apt update
-apt install -y libglib2.0-dev libgtk-3-dev libwebkit2gtk-4.0-dev libayatana-appindicator3-dev librsvg2-dev
+apt install -y libglib2.0-dev libgtk-3-dev librsvg2-dev
+
+# Устанавливаем дополнительные GTK библиотеки для gio
+echo "🔧 Устанавливаем GTK библиотеки..."
+apt install -y libgdk-pixbuf2.0-dev libpango1.0-dev libcairo2-dev libgdk-pixbuf-2.0-dev
+
+# Пытаемся установить WebKit (разные версии для разных Ubuntu)
+echo "🔍 Ищем подходящую версию WebKit..."
+if apt install -y libwebkit2gtk-4.1-dev 2>/dev/null; then
+    echo "✅ Установлен libwebkit2gtk-4.1-dev"
+elif apt install -y libwebkit2gtk-4.0-dev 2>/dev/null; then
+    echo "✅ Установлен libwebkit2gtk-4.0-dev"
+elif apt install -y libwebkit2gtk-4.0-37-dev 2>/dev/null; then
+    echo "✅ Установлен libwebkit2gtk-4.0-37-dev"
+else
+    echo "⚠️ WebKit не найден, продолжаем без него"
+fi
+
+# Пытаемся установить appindicator
+if apt install -y libayatana-appindicator3-dev 2>/dev/null; then
+    echo "✅ Установлен libayatana-appindicator3-dev"
+elif apt install -y libappindicator3-dev 2>/dev/null; then
+    echo "✅ Установлен libappindicator3-dev"
+else
+    echo "⚠️ AppIndicator не найден, продолжаем без него"
+fi
 
 echo "🧹 Очищаем кэш компиляции..."
 if [ -d "src-tauri/target" ]; then

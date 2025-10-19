@@ -21,14 +21,10 @@
   // Элементы UI, включая онлайн-управление
   const FIXED_WS_URL = 'ws://185.177.219.234:8765/ws';
   // roomInput убран из UI; комната не используется
+  const selfNameInput = document.getElementById('selfName');
+  const connectBtn = document.getElementById('connectBtn');
   const startGameBtn = document.getElementById('startGameBtn');
   const nextRoundBtn = document.getElementById('nextRoundBtn');
-  
-  // Элементы комнаты ожидания
-  const waitingRoom = document.getElementById('waiting-room');
-  const waitingPlayersList = document.getElementById('waiting-players-list');
-  const waitingStartBtn = document.getElementById('waiting-start-btn');
-  const waitingInfo = document.querySelector('.waiting-info');
   // удалены тестовые кнопки: forceEndRound/debugState/regenerateBoard
   const roundInfoEl = document.getElementById('roundInfo');
   const cueArea1El = document.getElementById('cueArea1');
@@ -38,11 +34,15 @@
   const cueInput2El = document.getElementById('cueInput2');
   const lockCueBtn2 = document.getElementById('lockCueBtn2');
   const currentCueEl = document.getElementById('currentCue');
+  const logEl = document.getElementById('log');
   // Модалка победителя
   const winnerModalEl = document.getElementById('winnerModal');
   const winnerTitleEl = document.getElementById('winnerTitle');
   const winnerTextEl = document.getElementById('winnerText');
   const newGameBtn = document.getElementById('newGameBtn');
+  // Prefer the button inside the game container to avoid clashing with hub header button
+  const backToHubBtn = document.querySelector('#gameContainer #backToHubBtn') || document.getElementById('backToHubBtn');
+  const backToHubFromWinnerBtn = document.querySelector('#gameContainer #backToHubFromWinnerBtn') || document.getElementById('backToHubFromWinnerBtn');
   // Логотип: подстраховка — если не загрузится файл иконки, покажем SVG-иконку
   const logoImg = document.querySelector('.app-logo');
   const logoFallback = document.querySelector('.app-logo-fallback');
@@ -53,158 +53,6 @@
   }
   // Всегда прячем локальную секцию добавления игроков (онлайн-режим только)
   if (addPlayerSectionEl) addPlayerSectionEl.style.display = 'none';
-  
-  // Глобальная функция для добавления игрока (для использования из hub.js)
-  window.addPlayerToGame = function(playerName) {
-    const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    const playerObj = { id, name: playerName, score: 0 };
-    players.push(playerObj);
-    
-    // Обновляем списки
-    if (typeof updateWaitingPlayersList === 'function') {
-      updateWaitingPlayersList();
-    }
-    if (typeof updateWaitingStartButton === 'function') {
-      updateWaitingStartButton();
-    }
-    if (typeof rerenderPlayers === 'function') {
-      rerenderPlayers();
-    }
-    
-    return playerObj;
-  };
-  
-  // Глобальная функция для обновления списка игроков в комнате ожидания
-  window.updateWaitingRoomPlayers = function(playersList) {
-    const waitingPlayersList = document.getElementById('waiting-players-list');
-    if (!waitingPlayersList) {
-      return;
-    }
-    
-    waitingPlayersList.innerHTML = '';
-    const currentUser = getCurrentUser();
-    
-    playersList.forEach((player, index) => {
-      const playerItem = document.createElement('div');
-      playerItem.className = 'waiting-player-item';
-      
-      const playerName = currentUser && currentUser.username === player.name ? `${player.name} (Вы)` : player.name;
-      playerItem.textContent = playerName;
-      
-      waitingPlayersList.appendChild(playerItem);
-    });
-  };
-  
-  // Глобальная функция для установки флага прохождения комнаты ожидания
-  window.setHasPassedWaitingRoom = function(value) {
-    hasPassedWaitingRoom = value;
-    
-    // Обновляем состояние кнопки "Старт"
-    if (startGameBtn) {
-      startGameBtn.disabled = !value;
-    }
-  };
-  
-  // Флаг для отслеживания прохождения комнаты ожидания
-  let hasPassedWaitingRoom = false;
-  
-  // Функции для работы с комнатой ожидания
-  function getCurrentUser() {
-    try { 
-      const user = JSON.parse(localStorage.getItem('currentUser') || 'null');
-      return user;
-    } catch (e) {
-      return null;
-    }
-  }
-  
-  function initializeWaitingRoom() {
-    const currentUser = getCurrentUser();
-    
-    if (currentUser && currentUser.username) {
-      // Автоматически добавляем текущего пользователя как объект с id, name и score
-      const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-      const playerObj = { id, name: currentUser.username, score: 0 };
-      players.push(playerObj);
-      
-      updateWaitingPlayersList();
-      updateWaitingStartButton();
-      rerenderPlayers(); // Обновляем основной список игроков
-      
-      // Скрываем информационное сообщение, так как пользователь авторизован
-      if (waitingInfo) {
-        waitingInfo.style.display = 'none';
-      }
-    } else {
-      // Показываем информационное сообщение, если пользователь не авторизован
-      if (waitingInfo) {
-        waitingInfo.textContent = 'Войдите в аккаунт, чтобы автоматически добавиться в игру';
-        waitingInfo.style.display = 'block';
-      }
-    }
-  }
-  
-  // Кэш для оптимизации updateWaitingPlayersList
-  let lastWaitingPlayersState = null;
-  let lastWaitingUserState = null;
-  
-  function updateWaitingPlayersList() {
-    if (!waitingPlayersList) {
-      return;
-    }
-    
-    // Проверяем, изменились ли игроки или пользователь
-    const currentState = JSON.stringify(players.map(p => ({ id: p.id, name: p.name })));
-    const currentUser = getCurrentUser();
-    const currentUserState = JSON.stringify(currentUser);
-    
-    if (currentState === lastWaitingPlayersState && 
-        currentUserState === lastWaitingUserState) {
-      return; // Ничего не изменилось, пропускаем рендеринг
-    }
-    
-    lastWaitingPlayersState = currentState;
-    lastWaitingUserState = currentUserState;
-    
-    waitingPlayersList.innerHTML = '';
-    
-    players.forEach((player, index) => {
-      const playerItem = document.createElement('div');
-      playerItem.className = 'waiting-player-item';
-      
-      // player теперь объект с полями id, name, score
-      const playerName = currentUser && currentUser.username === player.name ? `${player.name} (Вы)` : player.name;
-      playerItem.textContent = playerName;
-      
-      waitingPlayersList.appendChild(playerItem);
-    });
-  }
-  
-  function updateWaitingStartButton() {
-    if (!waitingStartBtn) return;
-    
-    // Включаем кнопку, если есть хотя бы один игрок
-    waitingStartBtn.disabled = players.length < 1;
-  }
-  
-  function startGameFromWaitingRoom() {
-    // Устанавливаем флаг, что пользователь прошел через комнату ожидания
-    hasPassedWaitingRoom = true;
-    
-    // Скрываем комнату ожидания
-    if (waitingRoom) {
-      waitingRoom.classList.remove('active');
-    }
-    
-    // Показываем основную игру
-    const mainLayout = document.querySelector('.layout');
-    if (mainLayout) {
-      mainLayout.classList.remove('hidden');
-    }
-    
-    // НЕ запускаем игру автоматически - только переключаем экраны
-    // Игра должна начаться только после нажатия кнопки "Старт"
-  }
 
   // Configurable board size via CSS variables
   const COLS = 30;
@@ -457,7 +305,7 @@
       } else {
         showSelectedColorForCueGiver();
         currentPlayerId = players[state.cueGiverIndex].id;
-        debouncedUpdateUIState();
+        updateUIState();
       }
     }, 300);
   }
@@ -493,31 +341,7 @@
     });
   }
 
-  // Кэш для оптимизации rerenderPlayers
-  let lastPlayersState = null;
-  let lastPhase = null;
-  let lastCueGiverIndex = null;
-  
   function rerenderPlayers() {
-    if (!playersListEl) {
-      return;
-    }
-    
-    // Проверяем, изменились ли игроки, фаза или индекс дающего подсказку
-    const currentState = JSON.stringify(players.map(p => ({ id: p.id, name: p.name, score: p.score })));
-    const currentPhase = state.phase;
-    const currentCueGiverIndex = state.cueGiverIndex;
-    
-    if (currentState === lastPlayersState && 
-        currentPhase === lastPhase && 
-        currentCueGiverIndex === lastCueGiverIndex) {
-      return; // Ничего не изменилось, пропускаем рендеринг
-    }
-    
-    lastPlayersState = currentState;
-    lastPhase = currentPhase;
-    lastCueGiverIndex = currentCueGiverIndex;
-    
     playersListEl.innerHTML = '';
     players.forEach((p, i) => {
       const row = document.createElement('div');
@@ -540,39 +364,26 @@
     return !offline && ws && ws.readyState === WebSocket.OPEN;
   }
 
-  // Debouncing для updateUIState
-  let updateUIStateTimeout = null;
-  
-  function debouncedUpdateUIState() {
-    if (updateUIStateTimeout) {
-      clearTimeout(updateUIStateTimeout);
-    }
-    updateUIStateTimeout = setTimeout(() => {
-      updateUIState();
-      updateUIStateTimeout = null;
-    }, 32); // ~30fps для лучшей производительности
-  }
-  
-  // Заменяем все вызовы updateUIState() на debouncedUpdateUIState()
   function updateUIState() {
     const online = isOnline();
     const s = window.__serverState;
     const phase = online ? (s?.phase || 'lobby') : state.phase;
+    console.log('updateUIState called, phase:', phase);
     
     if (phase === 'lobby' || phase === 'setup') {
-      roundInfoEl.textContent = 'Ожидание начала игры';
+      roundInfoEl.textContent = online ? 'Ожидание игроков. Нажмите Старт.' : 'Добавьте игроков и нажмите Старт.';
       cueArea1El.classList.add('hidden');
       cueArea2El.classList.add('hidden');
       currentCueEl.classList.add('hidden');
       nextRoundBtn.disabled = true;
       // онлайн-режим только: локальное добавление игроков скрыто
       addPlayerSectionEl.style.display = 'none';
-      startGameBtn.disabled = online ? !hasPassedWaitingRoom : !hasPassedWaitingRoom;
+      startGameBtn.disabled = online ? false : false;
     } else if (phase === 'cue1') {
       const giverIdx = online ? players.findIndex(p => p.id === s?.cue_giver) : state.cueGiverIndex;
       const giver = players[giverIdx];
       const roundNum = online ? (s?.round ?? 0) : state.round;
-      roundInfoEl.textContent = `Раунд ${roundNum} • Подсказка #1`;
+      roundInfoEl.textContent = `Раунд ${roundNum}. Подсказку #1 даёт: ${giver?.name ?? ''}`;
       const isGiver = online ? (giver && selfId && giver.id === selfId) : (giver && currentPlayerId === giver.id);
       cueArea1El.classList.toggle('hidden', !isGiver);
       cueArea2El.classList.add('hidden');
@@ -597,7 +408,7 @@
       const giverIdx = online ? players.findIndex(p => p.id === s?.cue_giver) : state.cueGiverIndex;
       const giver = players[giverIdx];
       const roundNum = online ? (s?.round ?? 0) : state.round;
-      roundInfoEl.textContent = `Раунд ${roundNum} • Догадки #1`;
+      roundInfoEl.textContent = `Раунд ${roundNum}. Подсказка #1 от ${giver?.name ?? ''}. Первая волна догадок.`;
       cueArea1El.classList.add('hidden');
       cueArea2El.classList.add('hidden');
       currentCueEl.classList.remove('hidden');
@@ -606,7 +417,7 @@
       const giverIdx = online ? players.findIndex(p => p.id === s?.cue_giver) : state.cueGiverIndex;
       const giver = players[giverIdx];
       const roundNum = online ? (s?.round ?? 0) : state.round;
-      roundInfoEl.textContent = `Раунд ${roundNum} • Подсказка #2`;
+      roundInfoEl.textContent = `Раунд ${roundNum}. Подсказку #2 даёт: ${giver?.name ?? ''}`;
       const isGiver = online ? (giver && selfId && giver.id === selfId) : (giver && currentPlayerId === giver.id);
       cueArea1El.classList.add('hidden');
       cueArea2El.classList.toggle('hidden', !isGiver);
@@ -617,24 +428,28 @@
       const giverIdx = online ? players.findIndex(p => p.id === s?.cue_giver) : state.cueGiverIndex;
       const giver = players[giverIdx];
       const roundNum = online ? (s?.round ?? 0) : state.round;
-      roundInfoEl.textContent = `Раунд ${roundNum} • Догадки #2`;
+      roundInfoEl.textContent = `Раунд ${roundNum}. Подсказка #2 от ${giver?.name ?? ''}. Вторая волна догадок.`;
       cueArea1El.classList.add('hidden');
       cueArea2El.classList.add('hidden');
       currentCueEl.classList.remove('hidden');
       nextRoundBtn.disabled = true;
     } else if (phase === 'reveal') {
       const roundNum = online ? (s?.round ?? 0) : state.round;
-      roundInfoEl.textContent = `Раунд ${roundNum} • Результаты`;
+      roundInfoEl.textContent = `Раунд ${roundNum} завершён.`;
       cueArea1El.classList.add('hidden');
       cueArea2El.classList.add('hidden');
       currentCueEl.classList.remove('hidden');
       nextRoundBtn.disabled = false;
+      console.log('Reveal phase: nextRoundBtn enabled');
     }
     rerenderPlayers();
   }
 
   function log(message) {
-    // История убрана - функция оставлена для совместимости
+    const el = document.createElement('div');
+    el.className = 'log-entry';
+    el.textContent = message;
+    logEl.prepend(el);
   }
 
   function startGame() {
@@ -651,19 +466,8 @@
   }
 
   function startOfflineGame() {
-    if (players.length < 1) { alert('Нужно минимум 1 игрок.'); return; }
-    
-    // Проверяем, нужно ли преобразовать имена в объекты
-    // Если первый элемент - строка, то преобразуем все
-    if (typeof players[0] === 'string') {
-      players = players.map((playerName, index) => ({
-        id: `player_${index}`,
-        name: playerName,
-        score: 0
-      }));
-    }
-    // Если уже объекты, то ничего не делаем
-    
+    if (players.length < 2) { alert('Нужно минимум 2 игрока.'); return; }
+    players = players.map((p)=>({ ...p, score: 0 }));
     state.round = 1;
     state.cueGiverIndex = 0;
     state.phase = 'cue1';
@@ -678,11 +482,15 @@
     selectedColorIndex = null; // сбрасываем выбранный цвет
     resetMarkers();
     currentCueEl.textContent = '';
+    logEl.innerHTML = '';
+    
+    console.log('Game started - color selection by:', players[colorSelectorIndex].name);
+    console.log('Cue will be given by:', players[state.cueGiverIndex].name);
     
     // Показываем модальное окно выбора цвета
     showColorSelectionModal();
     
-    debouncedUpdateUIState();
+    updateUIState();
   }
 
   function showTargetForCueGiver(show) {
@@ -710,7 +518,7 @@
       state.phase = 'guess1';
       const nextPlayerIndex = (state.cueGiverIndex + 1) % players.length;
       currentPlayerId = players[nextPlayerIndex].id;
-      debouncedUpdateUIState();
+      updateUIState();
     }
   }
   function lockCue2() {
@@ -724,7 +532,7 @@
       state.phase = 'guess2';
       const nextPlayerIndex = (state.cueGiverIndex + 1) % players.length;
       currentPlayerId = players[nextPlayerIndex].id;
-      debouncedUpdateUIState();
+      updateUIState();
     }
   }
 
@@ -751,7 +559,7 @@
     const currentIndex = activePlayers.findIndex(p => p.id === currentPlayerId);
     const nextIndex = (currentIndex + 1) % activePlayers.length;
     currentPlayerId = activePlayers[nextIndex].id;
-    debouncedUpdateUIState();
+    updateUIState();
   }
 
   function nextRound() {
@@ -790,7 +598,7 @@
     }
     
     state.phase = 'cue1';
-    debouncedUpdateUIState();
+    updateUIState();
     console.log('Next round started, phase set to cue1');
     console.log('=== nextRound() FUNCTION END ===');
   }
@@ -803,7 +611,7 @@
     players.push({ id, name, score: 0 });
     playerNameInput.value = '';
     rerenderPlayers();
-    debouncedUpdateUIState();
+    updateUIState();
   });
   playerNameInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') addPlayerBtn.click();
@@ -812,16 +620,28 @@
   startGameBtn.addEventListener('click', startGame);
   lockCueBtn1.addEventListener('click', lockCue1);
   lockCueBtn2.addEventListener('click', lockCue2);
-  // Добавляем обработчик для кнопки "Следующий раунд"
+  // Добавляем обработчик для кнопки "Следующий раунд" с дополнительной отладкой
   nextRoundBtn.addEventListener('click', (e) => {
+    console.log('=== NEXT ROUND BUTTON CLICKED ===');
+    console.log('Button disabled:', nextRoundBtn.disabled);
+    console.log('Current phase:', state.phase);
+    console.log('Offline mode:', offline);
+    console.log('Players count:', players.length);
+    console.log('Current cue giver index:', state.cueGiverIndex);
+    console.log('Current player ID:', currentPlayerId);
+    
     if (nextRoundBtn.disabled) {
+      console.log('❌ Button is disabled, ignoring click');
       alert('Кнопка "Следующий раунд" заблокирована. Игра должна быть в фазе "reveal".');
       return;
     }
     
+    console.log('✅ Button is enabled, calling nextRound()');
     try {
       if (isOnline()) wsSend({ type: 'next_round' }); else nextRound();
+      console.log('✅ nextRound() completed successfully');
     } catch (error) {
+      console.error('❌ Error in nextRound():', error);
       alert('Ошибка при запуске следующего раунда: ' + error.message);
     }
   });
@@ -831,13 +651,13 @@
 
   // Добавляем проверку состояния при загрузке страницы
   document.addEventListener('DOMContentLoaded', () => {
-    // Инициализируем комнату ожидания с небольшой задержкой
-    setTimeout(() => {
-      initializeWaitingRoom();
-    }, 100);
-    
-    // Автоматически подключаемся к серверу при загрузке
-    wsConnect();
+    console.log('=== PAGE LOADED ===');
+    console.log('Offline mode:', offline);
+    console.log('Players count:', players.length);
+    console.log('Current phase:', state.phase);
+    console.log('Next round button found:', !!nextRoundBtn);
+    console.log('Modal found:', !!document.getElementById('colorSelectionModal'));
+    console.log('=== PAGE LOAD COMPLETE ===');
   });
 
   // ONLINE: WebSocket client (optional)
@@ -845,26 +665,17 @@
     const url = FIXED_WS_URL;
     ws = new WebSocket(url);
     ws.onopen = () => {
-      // Получаем имя пользователя из localStorage
-      const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
-      const playerName = currentUser.name || 'Игрок';
-      wsSend({ type: 'join', name: playerName });
-      // Не запускаем игру автоматически, ждем нажатия кнопки в комнате ожидания
+      wsSend({ type: 'join', name: (selfNameInput.value || 'Игрок').trim() });
+      connectBtn.textContent = 'Отключиться';
+      connectBtn.onclick = wsDisconnect;
+      startGameBtn.disabled = false;
       modalBlockedUntilStart = true;
     };
     ws.onmessage = (ev) => {
       try {
         const msg = JSON.parse(ev.data);
         if (msg.type === 'welcome') { selfId = msg.id; }
-        if (msg.type === 'players') { 
-          players = msg.players; 
-          updateWaitingPlayersList();
-          updateWaitingStartButton();
-        }
-        if (msg.type === 'state') { 
-          window.__serverState = msg.state;
-          debouncedUpdateUIState();
-        }
+        if (msg.type === 'state') { applyServerState(msg.state); }
         if (msg.type === 'error') { alert(msg.message); }
       } catch (e) {
         console.error(e);
@@ -872,6 +683,8 @@
     };
     ws.onerror = () => { alert('Не удалось подключиться к серверу.'); };
     ws.onclose = () => {
+      connectBtn.textContent = 'Подключиться';
+      connectBtn.onclick = wsConnect;
       startGameBtn.disabled = true;
       ws = null;
       modalBlockedUntilStart = true;
@@ -891,8 +704,6 @@
       modalBlockedUntilStart = false;
     }
     players = s.players || [];
-    updateWaitingPlayersList();
-    updateWaitingStartButton();
     state.round = s.round;
     state.cueGiverIndex = s.cue_giver ? players.findIndex(p => p.id === s.cue_giver) : 0;
     currentCueEl.textContent = [s.cue1, s.cue2].filter(Boolean).join(' / ');
@@ -1009,7 +820,7 @@
     prevServerPhase = s.phase;
     prevServerCue1 = s.cue1;
     prevServerTarget = s.target;
-    debouncedUpdateUIState();
+    updateUIState();
 
     // Выявление победителя (>= WIN_SCORE) и показ модалки один раз
     try {
@@ -1044,12 +855,7 @@
   }
 
   // Подключение по фиксированному адресу
-  // connectBtn удален, подключение происходит автоматически
-  
-  // Обработчик для кнопки "Начать игру" в комнате ожидания
-  if (waitingStartBtn) {
-    waitingStartBtn.addEventListener('click', startGameFromWaitingRoom);
-  }
+  if (connectBtn) connectBtn.addEventListener('click', wsConnect);
 
   // Кнопка "Начать новую игру" в модалке победителя
   if (newGameBtn) {
@@ -1061,6 +867,7 @@
           el.classList.remove('guess', 'target', 'best', 'selected');
           el.removeAttribute('data-points');
         });
+        logEl.innerHTML = '';
         prevServerRound = null;
         prevServerPhase = null;
         prevServerCue1 = null;
@@ -1086,7 +893,33 @@
     });
   }
 
+  // Кнопка "Назад в хаб" в заголовке
+  if (backToHubBtn) {
+    backToHubBtn.addEventListener('click', () => {
+      if (window.returnToHub) {
+        window.returnToHub();
+      } else if (window.parent && window.parent.returnToHub) {
+        window.parent.returnToHub();
+      } else {
+        // Fallback для случая, если игра запущена не из хаба
+        window.location.href = '../../index.html';
+      }
+    });
+  }
 
+  // Кнопка "Вернуться в хаб" в модалке победителя
+  if (backToHubFromWinnerBtn) {
+    backToHubFromWinnerBtn.addEventListener('click', () => {
+      if (window.returnToHub) {
+        window.returnToHub();
+      } else if (window.parent && window.parent.returnToHub) {
+        window.parent.returnToHub();
+      } else {
+        // Fallback для случая, если игра запущена не из хаба
+        window.location.href = '../../index.html';
+      }
+    });
+  }
 
   function onCellClick(idx) {
     console.log('Cell clicked:', idx);
@@ -1136,9 +969,9 @@
             console.log('Calling revealAndScoreOffline');
             revealAndScoreOffline();
           }
-          debouncedUpdateUIState();
+          updateUIState();
         } else {
-          debouncedUpdateUIState(); // обновляем UI для следующего игрока
+          updateUIState(); // обновляем UI для следующего игрока
         }
       }
     } else {
@@ -1174,7 +1007,7 @@
     state.phase = 'reveal';
     console.log('Game phase changed to reveal, nextRoundBtn should be enabled');
     console.log('Calling updateUIState after phase change');
-    debouncedUpdateUIState();
+    updateUIState();
   }
 
   // Добавляем кнопку для принудительного завершения раунда (для тестирования)
@@ -1182,7 +1015,7 @@
     if (offline && state.phase !== 'reveal') {
       console.log('Force ending round, current phase:', state.phase);
       revealAndScoreOffline();
-      debouncedUpdateUIState();
+      updateUIState();
     }
   }
   
@@ -1196,7 +1029,7 @@
   });
 
   // Инициализация игры
-  debouncedUpdateUIState();
+  updateUIState();
 })();
 
 

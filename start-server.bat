@@ -27,3 +27,4 @@ echo.
 echo Нажмите Ctrl+C для остановки сервера
 
 cargo run --bin server
+

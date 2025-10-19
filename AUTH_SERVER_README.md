@@ -152,3 +152,4 @@ CREATE TABLE users (
 ```bash
 RUST_LOG=info cargo run --bin server > server.log 2>&1
 ```
+
