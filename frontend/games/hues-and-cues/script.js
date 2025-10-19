@@ -673,7 +673,7 @@
         const cu = JSON.parse(localStorage.getItem('currentUser') || 'null');
         if (cu && cu.username) uname = cu.username;
       } catch {}
-      wsSend({ type: 'join', name: (selfNameInput?.value || uname).trim() });
+      wsSend({ type: 'join', name: (selfNameInput?.value || uname).trim(), room: 'default' });
       connectBtn.textContent = 'Отключиться';
       connectBtn.onclick = wsDisconnect;
       startGameBtn.disabled = false;
