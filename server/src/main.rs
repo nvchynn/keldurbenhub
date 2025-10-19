@@ -384,11 +384,7 @@ async fn handle_client_msg(conn_id: Uuid, cmd: ClientMsg, app: &AppState) {
             let player_id = Uuid::new_v4();
             
             let mut hub = app.hub.lock().await;
-            let room_entry = hub.rooms.entry(room_name.clone()).or_insert_with(|| {
-                let mut r = default_room();
-                r.name = room_name.clone(); // ИСПРАВЛЕНИЕ: устанавливаем правильное имя комнаты
-                r
-            });
+            let room_entry = hub.rooms.entry(room_name.clone()).or_insert_with(|| default_room());
             room_entry.players.push(Player { id: player_id, name: name.clone(), score: 0 });
             let total_players = room_entry.players.len();
             hub.conns.insert(conn_id, (room_name.clone(), player_id));
@@ -527,7 +523,7 @@ async fn handle_client_msg(conn_id: Uuid, cmd: ClientMsg, app: &AppState) {
 fn broadcast_state(room_name: String, hub: &mut WsHub) {
     if let Some(room) = hub.rooms.get(&room_name) {
         let dto = GameStateDto {
-            room: room.name.clone(),
+            room: room_name.clone(),
             round: room.round,
             cols: room.cols,
             rows: room.rows,
@@ -545,9 +541,9 @@ fn broadcast_state(room_name: String, hub: &mut WsHub) {
             last_guesses: room.guess2_cells.iter().map(|(k,v)| (*k, *v)).collect(),
         };
         let msg = Message::Text(serde_json::to_string(&ServerMsg::State{ state: dto.clone() }).unwrap());
-        tracing::info!(target="keldurben_server", event="broadcast_state", room=%room.name, players=%room.players.len(), phase=%room.phase as u8, round=%room.round);
+        tracing::info!(target="keldurben_server", event="broadcast_state", room=%room_name, players=%room.players.len(), phase=%room.phase as u8, round=%room.round);
         for (_cid, (rname, _pid)) in hub.conns.iter() {
-            if rname == &room.name {
+            if rname == &room_name {
                 if let Some(tx) = hub.txs.get(_cid) { let _ = tx.send(msg.clone()); }
             }
         }
