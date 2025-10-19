@@ -674,9 +674,8 @@
         if (cu && cu.username) uname = cu.username;
       } catch {}
       wsSend({ type: 'join', name: (selfNameInput?.value || uname).trim(), room: 'default' });
-      connectBtn.textContent = 'Отключиться';
-      connectBtn.onclick = wsDisconnect;
-      startGameBtn.disabled = false;
+      if (connectBtn) { connectBtn.textContent = 'Отключиться'; connectBtn.onclick = wsDisconnect; }
+      if (startGameBtn) startGameBtn.disabled = false;
       modalBlockedUntilStart = true;
     };
     ws.onmessage = (ev) => {
@@ -689,11 +688,10 @@
         console.error(e);
       }
     };
-    ws.onerror = () => { alert('Не удалось подключиться к серверу.'); };
+    ws.onerror = () => { try { console.warn('WS error'); } catch {} };
     ws.onclose = () => {
-      connectBtn.textContent = 'Подключиться';
-      connectBtn.onclick = wsConnect;
-      startGameBtn.disabled = true;
+      if (connectBtn) { connectBtn.textContent = 'Подключиться'; connectBtn.onclick = wsConnect; }
+      if (startGameBtn) startGameBtn.disabled = true;
       ws = null;
       modalBlockedUntilStart = true;
     };
@@ -741,7 +739,9 @@
     if (prevServerRound != null && s.round > prevServerRound) {
       modalBlockedUntilStart = false;
     }
-    players = s.players || [];
+    players = Array.isArray(s.players) ? s.players : [];
+    // обновим комнату ожидания в хабе, если он есть
+    try { if (typeof window.updateWaitingRoomPlayers === 'function') window.updateWaitingRoomPlayers(players); } catch {}
     state.round = s.round;
     state.cueGiverIndex = s.cue_giver ? players.findIndex(p => p.id === s.cue_giver) : 0;
     currentCueEl.textContent = [s.cue1, s.cue2].filter(Boolean).join(' / ');
