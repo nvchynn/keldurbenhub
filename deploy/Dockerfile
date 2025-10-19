@@ -11,7 +11,7 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /app
 
 # Copy Cargo files
-COPY server/Cargo.toml server/Cargo.lock ./
+COPY ../server/Cargo.toml ../server/Cargo.lock ./
 
 # Create dummy main.rs to cache dependencies
 RUN mkdir src && echo "fn main() {}" > src/main.rs && echo "pub struct AuthService;" > src/auth.rs
@@ -20,7 +20,7 @@ RUN mkdir src && echo "fn main() {}" > src/main.rs && echo "pub struct AuthServi
 RUN cargo build --release && rm -rf src
 
 # Copy source code
-COPY server/src ./src
+COPY ../server/src ./src
 
 # Build the actual application
 RUN cargo build --release
@@ -44,7 +44,7 @@ WORKDIR /app
 COPY --from=builder /app/target/release/server /app/server
 
 # Copy frontend files
-COPY frontend /app/frontend
+COPY ../frontend /app/frontend
 
 # Create data directory
 RUN mkdir -p /app/data && chown -R keldurben:keldurben /app
