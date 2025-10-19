@@ -370,6 +370,7 @@ async fn handle_client_msg(conn_id: Uuid, cmd: ClientMsg, app: &AppState) {
             let player_id = Uuid::new_v4();
             room_entry.players.push(Player { id: player_id, name: name.clone(), score: 0 });
             hub.conns.insert(conn_id, (room_name.clone(), player_id));
+            tracing::info!(target: "keldurben_server", event="join", name=%name, room=%room_name, player_id=%player_id);
             if let Some(tx) = hub.txs.get(&conn_id) {
                 let _ = tx.send(Message::Text(
                     serde_json::to_string(&ServerMsg::Welcome { id: player_id, room: room_name.clone() }).unwrap()
@@ -520,7 +521,8 @@ fn broadcast_state(room_name: String, hub: &mut WsHub) {
             guesses2: room.guess2_cells.iter().map(|(k,v)| (*k, *v)).collect(),
             last_guesses: room.guess2_cells.iter().map(|(k,v)| (*k, *v)).collect(),
         };
-        let msg = Message::Text(serde_json::to_string(&ServerMsg::State{ state: dto }).unwrap());
+        let msg = Message::Text(serde_json::to_string(&ServerMsg::State{ state: dto.clone() }).unwrap());
+        tracing::info!(target="keldurben_server", event="broadcast_state", room=%room.name, players=%room.players.len(), phase=%room.phase as u8, round=%room.round);
         for (_cid, (rname, _pid)) in hub.conns.iter() {
             if rname == &room.name {
                 if let Some(tx) = hub.txs.get(_cid) { let _ = tx.send(msg.clone()); }
