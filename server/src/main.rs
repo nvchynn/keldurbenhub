@@ -11,9 +11,7 @@ use futures_util::{SinkExt, StreamExt};
 use serde::{Deserialize, Serialize};
 use tokio::net::TcpListener;
 use tokio_stream::wrappers::UnboundedReceiverStream;
-use tokio_stream::StreamExt as _;
 use tower_http::{cors::CorsLayer, services::{ServeDir, ServeFile}, compression::CompressionLayer, trace::TraceLayer};
-use tower::ServiceExt as _;
 use tracing::info;
 use uuid::Uuid;
 
@@ -224,12 +222,6 @@ async fn main() -> anyhow::Result<()> {
                 ServeDir::new(static_dir.clone())
                     .fallback(ServeFile::new(format!("{}/index.html", static_dir)))
             )
-            .handle_error(|err: std::io::Error| async move {
-                (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    format!("Static file error: {}", err),
-                )
-            })
         )
         .layer(cors)
         .layer(CompressionLayer::new())
